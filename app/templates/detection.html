@@ -1,614 +1,371 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>智慧分类检测 - 垃圾分类系统</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --green: #4caf50;
-  --green2: #f1f8e9;
-  --orange: #ff9800;
-  --orange2: #fff8e1;
-  --red: #f44336;
-  --red2: #fce4ec;
-  --blue: #2196f3;
-  --blue2: #e3f2fd;
-  --text: #333;
-  --text2: #999;
-  --bg: #f5f5f5;
-  --white: #ffffff;
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, sans-serif; }
+
+.gradient-text {
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+.gradient-primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
-body {
-  font-family: 'Microsoft YaHei', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  line-height: 1.6;
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.top-bar {
-  background: var(--white);
-  border-bottom: 1px solid #e8e8e8;
-  padding: 0 40px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.upload-zone {
+  border: 2px dashed #d1d5db;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+  transform: scale(1.01);
 }
 
-.site-name {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: var(--text);
-  text-decoration: none;
+.upload-zone.has-image {
+  border-style: solid;
+  border-color: #10b981;
 }
 
-.site-name span {
-  color: var(--green);
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.main-nav {
-  display: flex;
-  gap: 4px;
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }
 
-.main-nav a {
-  color: var(--text2);
-  text-decoration: none;
-  padding: 7px 16px;
-  border-radius: 4px;
-  font-size: 0.9rem;
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
 }
 
-.main-nav a:hover {
-  background: var(--green2);
-  color: var(--green);
-}
-
-.main-nav a.now {
-  background: var(--green);
-  color: white;
-}
-
-.page {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-.row {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.card {
-  background: var(--white);
-  border: 1px solid #ddd;
-  padding: 20px;
-}
-
-.card-left {
-  flex: 1;
-}
-
-.card-right {
-  width: 300px;
-}
-
-.card-title {
-  font-size: 1rem;
-  font-weight: bold;
-  margin-bottom: 16px;
-  color: var(--text);
-}
-
-.btn-tab {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-
-.btn-tab button {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  background: #f5f5f5;
-  color: #888;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-family: inherit;
-}
-
-.btn-tab button.on {
-  background: var(--white);
-  color: var(--text);
-  font-weight: bold;
-  border-bottom: none;
-}
-
-.tab-box {
-  display: none;
-}
-
-.tab-box.on {
-  display: block;
-}
-
-.up-box {
-  display: block;
-  border: 2px solid #e0e0e0;
-  padding: 40px 20px;
-  text-align: center;
-  cursor: pointer;
-  background: var(--white);
-}
-
-.up-box:hover {
-  border-color: var(--green);
-  background: var(--green2);
-}
-
-.up-box input {
-  display: none;
-}
-
-.up-icon {
-  font-size: 40px;
-  margin-bottom: 10px;
-}
-
-.up-text {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.up-hint {
-  color: #aaa;
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-.up-img {
-  margin-top: 16px;
-  display: none;
-}
-
-.up-img.on {
-  display: block;
-}
-
-.up-img img {
-  width: 100%;
-  border-radius: 6px;
-}
-
-.btn-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.btn {
-  flex: 1;
-  padding: 10px;
-  border-radius: 5px;
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-}
-
-.btn-green {
-  background: var(--green);
-  color: white;
-}
-
-.btn-green:hover {
-  background: #43a047;
-}
-
-.btn-gray {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid #ddd;
-}
-
-.btn-gray:hover {
-  border-color: var(--green);
-  color: var(--green);
-}
-
-.loading {
-  display: none;
-  text-align: center;
-  padding: 30px;
-}
-
-.loading.on {
-  display: block;
-}
-
-.load-circle {
-  width: 30px;
-  height: 30px;
-  border: 3px solid var(--green2);
-  border-top: 3px solid var(--green);
-  border-radius: 50%;
-  margin: 0 auto 8px;
-  animation: spin 0.8s linear infinite;
+.pulse-animation {
+  animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-.load-text {
-  color: var(--text2);
-  font-size: 0.85rem;
+.spinner {
+  animation: spin 1s linear infinite;
 }
 
-.res-img {
-  width: 100%;
-  border-radius: 6px;
-  margin-top: 14px;
-  display: none;
-  border: 1px solid var(--green2);
+.result-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.result-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
 }
 
-.cam-video {
-  width: 100%;
-  border-radius: 6px;
-  background: var(--bg);
-  max-height: 320px;
-  object-fit: cover;
-  border: 1px solid #e8e8e8;
-}
-
-.cam-canvas {
-  display: none;
-}
-
-.cam-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.cam-row button {
-  flex: 1;
-  min-width: 90px;
-}
-
-.auto-row {
-  display: flex;
+.badge {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  font-size: 0.85rem;
-  color: var(--text2);
-  cursor: pointer;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.auto-row input {
-  display: none;
+.badge-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
 }
 
-.toggle {
-  width: 36px;
-  height: 18px;
-  background: #ccc;
-  border-radius: 9px;
+.badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.toggle-switch {
   position: relative;
+  width: 48px;
+  height: 26px;
+  background: #d1d5db;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-.toggle::after {
+.toggle-switch.active {
+  background: #10b981;
+}
+
+.toggle-switch::after {
   content: '';
   position: absolute;
-  width: 14px;
-  height: 14px;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
   background: white;
   border-radius: 50%;
-  top: 2px;
-  left: 2px;
-  transition: 0.3s;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.auto-row input:checked + .toggle {
-  background: var(--green);
+.toggle-switch.active::after {
+  left: 25px;
 }
 
-.auto-row input:checked + .toggle::after {
-  left: 18px;
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+  background-size: 30px 30px;
 }
 
-.empty {
-  text-align: center;
-  padding: 24px;
-  color: var(--text2);
-  font-size: 0.85rem;
+.nav-link {
+  position: relative;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #10b981;
+  transition: all 0.3s;
+  transform: translateX(-50%);
+}
+.nav-link:hover::after, .nav-link.active::after {
+  width: 100%;
 }
 
-.status-card {
-  text-align: center;
-  padding: 30px;
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #10b981, transparent);
+  animation: scanLine 2s ease-in-out infinite;
 }
 
-.status-card.danger {
-  background: var(--red2);
+@keyframes scanLine {
+  0%, 100% { top: 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
 }
 
-.status-icon {
-  font-size: 36px;
-  margin-bottom: 8px;
-}
-
-.status-title {
-  font-size: 1rem;
-  font-weight: bold;
-}
-
-.status-tip {
-  font-size: 0.8rem;
-  color: var(--text2);
-  margin-top: 4px;
-}
-
-.status-info {
-  margin-top: 12px;
-  padding: 10px;
-  background: #f9f9f9;
-  font-size: 0.8rem;
-  color: var(--text2);
-  text-align: left;
-  line-height: 1.6;
-}
-
-.list-box {
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  background: var(--bg);
-  border-radius: 5px;
-  margin-bottom: 8px;
-}
-
-.list-item.alarm {
-  background: var(--red2);
-  border: 1px solid #ef9a9a;
-}
-
-.list-name {
-  font-size: 0.85rem;
-}
-
-.conf {
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-}
-
-.conf-hi {
-  background: var(--green2);
-  color: var(--green);
-}
-
-.conf-md {
-  background: var(--orange2);
-  color: var(--orange);
-}
-
-.conf-lo {
-  background: var(--red2);
-  color: var(--red);
-}
-
-.count-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.count-box {
-  text-align: center;
-  padding: 14px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--green2), #f5f5f5);
-}
-
-.count-box:nth-child(2) {
-  background: linear-gradient(135deg, var(--red2), #f5f5f5);
-}
-
-.count-num {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--green);
-}
-
-.count-box:nth-child(2) .count-num {
-  color: var(--red);
-}
-
-.count-label {
-  font-size: 0.78rem;
-  color: var(--text2);
-  margin-top: 2px;
-}
-
-.video-progress {
-  margin-top: 10px;
-  height: 4px;
-  background: #ddd;
-  border-radius: 2px;
+.confidence-bar {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
   overflow: hidden;
 }
 
-.video-progress-bar {
+.confidence-fill {
   height: 100%;
-  background: var(--green);
-  width: 0%;
-  transition: width 0.3s;
-}
-
-.video-progress-text {
-  font-size: 0.75rem;
-  color: var(--text2);
-  margin-top: 4px;
-}
-
-@media (max-width: 800px) {
-  .row {
-    flex-direction: column;
-  }
-  .card-right {
-    width: 100%;
-  }
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
 }
 </style>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
 
-<header class="top-bar">
-  <a class="site-name" href="/">社区<span>垃圾</span>分类</a>
-  <nav class="main-nav">
-    <a href="/">首页</a>
-    <a href="/detection" class="now">智慧分类检测</a>
-    <a href="/alerts">记录</a>
-    <a href="/statistics">统计</a>
-  </nav>
-</header>
-
-<main class="page">
-  <div class="row">
-    <div class="card card-left">
-      <div class="card-title">上传检测</div>
-
-      <div class="btn-tab">
-        <button class="on" onclick="switchTab('up', this)">图片上传</button>
-        <button onclick="switchTab('video', this)">视频上传</button>
-        <button onclick="switchTab('cam', this)">摄像头</button>
-      </div>
-
-      <div id="tab-up" class="tab-box on">
-        <label class="up-box" id="up-box">
-          <input type="file" id="file-input" accept="image/*">
-          <div class="up-icon">+</div>
-          <div class="up-text">点击选择图片，或拖拽到此处</div>
-          <div class="up-hint">支持 JPG、PNG、BMP 格式</div>
-        </label>
-
-        <div class="up-img" id="up-img">
-          <img id="pre-img" src="" alt="预览">
-          <div class="btn-row">
-            <button class="btn btn-green" id="det-btn" onclick="doDetect()">开始检测</button>
-            <button class="btn btn-gray" onclick="clearImg()">清除图片</button>
-          </div>
-        </div>
-
-        <div class="loading" id="up-loading">
-          <div class="load-circle"></div>
-          <div class="load-text">正在识别中，请稍候...</div>
-        </div>
-
-        <img class="res-img" id="res-img" src="" alt="结果">
-      </div>
-
-      <div id="tab-video" class="tab-box">
-        <label class="up-box" id="video-box">
-          <input type="file" id="video-input" accept="video/*">
-          <div class="up-icon">+</div>
-          <div class="up-text">点击选择视频，或拖拽到此处</div>
-          <div class="up-hint">支持 MP4、AVI、MOV 格式</div>
-        </label>
-
-        <div id="video-preview" style="display:none;margin-top:16px;">
-          <video id="video-player" controls style="width:100%;border-radius:6px;background:#000;max-height:400px;"></video>
-          <div class="btn-row">
-            <button class="btn btn-green" id="video-det-btn" onclick="doVideoDetect()">开始检测</button>
-            <button class="btn btn-gray" onclick="clearVideo()">清除视频</button>
-          </div>
-        </div>
-
-        <div class="loading" id="video-loading">
-          <div class="load-circle"></div>
-          <div class="load-text">正在检测视频，请稍候...</div>
-        </div>
-
-        <div id="video-result" style="display:none;margin-top:16px;">
-          <div style="font-size:0.85rem;color:#666;margin-bottom:8px;">检测结果视频：</div>
-          <video id="result-player" controls style="width:100%;border-radius:6px;background:#000;max-height:400px;"></video>
-          <div id="video-stats" style="margin-top:12px;padding:10px;background:#f9f9f9;border-radius:5px;font-size:0.8rem;color:#666;"></div>
-        </div>
-      </div>
-
-      <div id="tab-cam" class="tab-box">
-        <video class="cam-video" id="cam-video" autoplay playsinline muted></video>
-        <canvas class="cam-canvas" id="cam-canvas"></canvas>
-        <div class="cam-row">
-          <button class="btn btn-green" id="btn-open" onclick="openCam()">开启摄像头</button>
-          <button class="btn btn-gray" id="btn-close" onclick="closeCam()" disabled>关闭摄像头</button>
-          <button class="btn btn-gray" id="btn-snap" onclick="snapAndDetect()" disabled>拍照检测</button>
-        </div>
-        <label class="auto-row">
-          <input type="checkbox" id="auto-check" onchange="toggleAuto()">
-          <span class="toggle"></span>
-          <span>自动检测</span>
-          <select id="auto-interval" style="margin-left:8px;padding:4px 8px;border-radius:4px;border:1px solid #ddd;">
-            <option value="100">0.1秒</option>
-            <option value="1000">1秒</option>
-            <option value="3000" selected>3秒</option>
-          </select>
-        </label>
-        <div class="loading" id="cam-loading">
-          <div class="load-circle"></div>
-          <div class="load-text">正在识别中，请稍候...</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card card-right">
-      <div class="card-title">检测状态</div>
-      <div class="card status-card" id="status-box">
-        <div class="empty">等待上传图片...</div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <div class="card-title">检测结果 <span id="det-num" style="font-weight:normal;color:#999;font-size:0.8rem;"></span></div>
-        <div class="list-box" id="det-list">
-          <div class="empty">暂无结果</div>
-        </div>
-      </div>
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 right-0 z-50 glass border-b border-gray-200/50">
+  <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2"><span class="text-xl font-bold">智慧<span class="gradient-text">垃圾分类</span></span></a>
+    
+    <div class="flex items-center gap-1">
+      <a href="/" class="nav-link px-4 py-2 text-sm font-medium text-gray-500 hover:text-emerald-600 rounded-lg">首页</a>
+      <a href="/detection" class="nav-link active px-4 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 rounded-lg">智慧检测</a>
+      <a href="/alerts" class="nav-link px-4 py-2 text-sm font-medium text-gray-500 hover:text-emerald-600 rounded-lg">预警记录</a>
+      <a href="/statistics" class="nav-link px-4 py-2 text-sm font-medium text-gray-500 hover:text-emerald-600 rounded-lg">数据统计</a>
+      <a href="/dataset" class="nav-link px-4 py-2 text-sm font-medium text-gray-500 hover:text-emerald-600 rounded-lg">数据集</a>
     </div>
   </div>
+</nav>
 
-  <div class="row">
-    <div class="card card-right" style="margin-left:auto">
-      <div class="card-title">本次统计</div>
-      <div class="count-row">
-        <div class="count-box">
-          <div class="count-num" id="count-total">0</div>
-          <div class="count-label">检测次数</div>
+<!-- Main Content -->
+<main class="pt-24 pb-16 cyber-grid min-h-screen">
+  <div class="max-w-7xl mx-auto px-6">
+    <!-- Header -->
+    <div class="text-center mb-10">
+      <h1 class="text-4xl font-bold text-gray-800 mb-3">智慧分类检测</h1>
+      <p class="text-gray-500 text-lg">上传图片或使用摄像头，AI 将自动识别垃圾分类情况</p>
+    </div>
+    
+    <!-- Main Grid -->
+    <div class="grid lg:grid-cols-3 gap-8">
+      <!-- Left Panel - Upload Area -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+          <!-- Tabs -->
+          <div class="flex border-b border-gray-100">
+            <button id="tab-upload" onclick="switchTab('upload')" class="flex-1 py-4 text-sm font-semibold text-emerald-600 border-b-2 border-emerald-500 transition-all">
+              <span class="flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                上传图片
+              </span>
+            </button>
+            <button id="tab-camera" onclick="switchTab('camera')" class="flex-1 py-4 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-emerald-600 transition-all">
+              <span class="flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                摄像头
+              </span>
+            </button>
+          </div>
+          
+          <!-- Upload Tab Content -->
+          <div id="content-upload" class="p-8">
+            <div id="upload-zone" class="upload-zone rounded-2xl p-12 text-center cursor-pointer relative" onclick="document.getElementById('file-input').click()">
+              <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+              
+              <div id="upload-placeholder">
+                <div class="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
+                  <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">拖拽图片到这里</h3>
+                <p class="text-gray-500 mb-4">或点击选择文件上传</p>
+                <p class="text-sm text-gray-400">支持 JPG、PNG、GIF、BMP 格式</p>
+              </div>
+              
+              <div id="image-preview" class="hidden">
+                <img id="preview-img" class="max-h-96 mx-auto rounded-xl shadow-lg" alt="Preview">
+                <div class="scan-line"></div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex gap-4 mt-6">
+              <button onclick="detectImage()" id="btn-detect" class="flex-1 gradient-primary text-white font-semibold py-4 rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                开始检测
+              </button>
+              <button onclick="resetUpload()" class="px-6 py-4 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:border-emerald-300 hover:text-emerald-600 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Camera Tab Content -->
+          <div id="content-camera" class="hidden p-8">
+            <div class="relative rounded-2xl overflow-hidden bg-gray-900 aspect-video">
+              <video id="camera-video" class="w-full h-full object-cover" autoplay playsinline></video>
+              <canvas id="camera-canvas" class="hidden"></canvas>
+              <div id="camera-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-500">
+                <div class="text-center">
+                  <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                  <p>点击按钮启动摄像头</p>
+                </div>
+              </div>
+              <div class="scan-line"></div>
+            </div>
+            
+            <!-- Camera Controls -->
+            <div class="flex gap-4 mt-6 items-center">
+              <button onclick="toggleCamera()" id="btn-camera" class="flex-1 bg-gray-800 text-white font-semibold py-4 rounded-xl hover:bg-gray-900 transition-all flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                启动摄像头
+              </button>
+              <button onclick="captureAndDetect()" id="btn-capture" class="flex-1 gradient-primary text-white font-semibold py-4 rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                拍照检测
+              </button>
+            </div>
+            
+            <!-- Auto Detect Toggle -->
+            <div class="flex items-center justify-between mt-4 p-4 bg-gray-50 rounded-xl">
+              <div>
+                <div class="font-semibold text-gray-800">自动连续检测</div>
+                <div class="text-sm text-gray-500">每秒自动检测一次</div>
+              </div>
+              <div id="auto-toggle" class="toggle-switch" onclick="toggleAutoDetect()"></div>
+            </div>
+          </div>
+          
+          <!-- Loading State -->
+          <div id="loading-state" class="hidden p-12 text-center">
+            <div class="w-20 h-20 rounded-full border-4 border-emerald-200 border-t-emerald-500 spinner mx-auto mb-6"></div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">正在分析...</h3>
+            <p class="text-gray-500">AI 正在识别图片中的垃圾分类情况</p>
+          </div>
+          
+          <!-- Result Image -->
+          <div id="result-image" class="hidden p-8 pt-0">
+            <div class="relative rounded-2xl overflow-hidden bg-gray-100 mt-6">
+              <img id="result-img" class="w-full" alt="Result">
+              <div class="scan-line"></div>
+            </div>
+          </div>
         </div>
-        <div class="count-box">
-          <div class="count-num" id="count-alarm">0</div>
-          <div class="count-label">预警次数</div>
+      </div>
+      
+      <!-- Right Panel - Results -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 sticky top-24">
+          <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            检测结果
+          </h2>
+          
+          <!-- Empty State -->
+          <div id="result-empty" class="text-center py-12">
+            <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+              </svg>
+            </div>
+            <p class="text-gray-500">上传图片</p>
+            <p class="text-gray-500">检测结果将显示在这里</p>
+          </div>
+          
+          <!-- Results List -->
+          <div id="result-list" class="space-y-4 hidden">
+            <!-- Results will be inserted here -->
+          </div>
+          
+          <!-- Scene Status -->
+          <div id="scene-status" class="hidden mt-6 p-4 rounded-xl border-2">
+            <!-- Status will be inserted here -->
+          </div>
         </div>
       </div>
     </div>
@@ -616,439 +373,334 @@ body {
 </main>
 
 <script>
-var camStream = null;
-var autoTimer = null;
-var totalCount = 0;
-var alarmCount = 0;
+let selectedFile = null;
+let cameraStream = null;
+let autoDetectInterval = null;
 
-var nameMap = {
-  0: '垃圾桶',
-  1: '垃圾溢出',
-  2: '散落垃圾',
-  3: '火焰',
-  4: '烟雾'
+const classIconMap = {
+  0: '🗑️',
+  1: '⚠️',
+  2: '🧹',
+  3: '🔥',
+  4: '💨',
+  garbage_bin: '🗑️',
+  overflow: '⚠️',
+  garbage: '🧹',
+  fire: '🔥',
+  smoke: '💨'
 };
 
-function switchTab(name, btn) {
-  var tabs = document.querySelectorAll('.btn-tab button');
-  for (var i = 0; i < tabs.length; i++) {
-    tabs[i].classList.remove('on');
-  }
-  btn.classList.add('on');
+function switchTab(tab) {
+  ['upload', 'camera'].forEach((name) => {
+    const tabEl = document.getElementById(`tab-${name}`);
+    const contentEl = document.getElementById(`content-${name}`);
+    tabEl.classList.remove('text-emerald-600', 'border-emerald-500');
+    tabEl.classList.add('text-gray-500', 'border-transparent');
+    contentEl.classList.add('hidden');
+  });
 
-  var panels = document.querySelectorAll('.tab-box');
-  for (var i = 0; i < panels.length; i++) {
-    panels[i].classList.remove('on');
-  }
-  document.getElementById('tab-' + name).classList.add('on');
-
-  if (name !== 'cam') {
-    closeCam();
-  }
+  const activeTab = document.getElementById(`tab-${tab}`);
+  const activeContent = document.getElementById(`content-${tab}`);
+  activeTab.classList.remove('text-gray-500', 'border-transparent');
+  activeTab.classList.add('text-emerald-600', 'border-emerald-500');
+  activeContent.classList.remove('hidden');
 }
 
-var fileInput = document.getElementById('file-input');
-var upImg = document.getElementById('up-img');
-var preImg = document.getElementById('pre-img');
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
 
-fileInput.addEventListener('change', function(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    preImg.src = ev.target.result;
-    upImg.classList.add('on');
-    document.getElementById('res-img').style.display = 'none';
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('upload-placeholder').classList.add('hidden');
+    document.getElementById('image-preview').classList.remove('hidden');
+    document.getElementById('upload-zone').classList.add('has-image');
   };
   reader.readAsDataURL(file);
-});
-
-var upBox = document.getElementById('up-box');
-
-upBox.addEventListener('dragover', function(e) {
-  e.preventDefault();
-  upBox.style.borderColor = 'var(--green)';
-  upBox.style.background = 'var(--green2)';
-});
-
-upBox.addEventListener('dragleave', function(e) {
-  e.preventDefault();
-  upBox.style.borderColor = '#e0e0e0';
-  upBox.style.background = 'white';
-});
-
-upBox.addEventListener('drop', function(e) {
-  e.preventDefault();
-  upBox.style.borderColor = '#e0e0e0';
-  upBox.style.background = 'white';
-
-  if (e.dataTransfer.files.length > 0) {
-    fileInput.files = e.dataTransfer.files;
-    fileInput.dispatchEvent(new Event('change'));
-  }
-});
-
-function clearImg() {
-  fileInput.value = '';
-  upImg.classList.remove('on');
-  document.getElementById('res-img').style.display = 'none';
-  resetStatus();
 }
 
-async function doDetect() {
-  var file = fileInput.files[0];
-  if (!file) {
-    alert('请先选择一张图片');
+function resetUpload() {
+  selectedFile = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('upload-placeholder').classList.remove('hidden');
+  document.getElementById('image-preview').classList.add('hidden');
+  document.getElementById('upload-zone').classList.remove('has-image');
+  document.getElementById('result-image').classList.add('hidden');
+  document.getElementById('result-empty').classList.remove('hidden');
+  document.getElementById('result-list').classList.add('hidden');
+  document.getElementById('scene-status').classList.add('hidden');
+  document.getElementById('btn-detect').disabled = false;
+  document.getElementById('loading-state').classList.add('hidden');
+}
+
+function setLoading(on) {
+  document.getElementById('btn-detect').disabled = on;
+  document.getElementById('loading-state').classList.toggle('hidden', !on);
+}
+
+async function detectImage() {
+  if (!selectedFile) {
+    alert('请先选择图片');
     return;
   }
 
-  document.getElementById('det-btn').disabled = true;
-  showLoad('up-loading', true);
-
-  var formData = new FormData();
-  formData.append('file', file);
+  setLoading(true);
+  const formData = new FormData();
+  formData.append('file', selectedFile);
 
   try {
-    var resp = await fetch('/api/detect/image', { method: 'POST', body: formData });
-    var data = await resp.json();
-
-    if (data.success) {
-      showResult(data);
-      if (data.result_image) {
-        var pic = document.getElementById('res-img');
-        pic.src = 'data:image/jpeg;base64,' + data.result_image;
-        pic.style.display = 'block';
-      }
-    } else {
-      alert('检测失败，请重试');
-    }
-  } catch (err) {
-    alert('网络错误，请检查服务是否正常运行');
-  }
-
-  showLoad('up-loading', false);
-  document.getElementById('det-btn').disabled = false;
-}
-
-async function openCam() {
-  try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-    document.getElementById('cam-video').srcObject = camStream;
-    document.getElementById('btn-open').disabled = true;
-    document.getElementById('btn-close').disabled = false;
-    document.getElementById('btn-snap').disabled = false;
-  } catch (e) {
-    alert('无法访问摄像头，请确认已授予摄像头权限');
-  }
-}
-
-function closeCam() {
-  if (autoTimer) {
-    clearInterval(autoTimer);
-    autoTimer = null;
-  }
-  document.getElementById('auto-check').checked = false;
-
-  if (camStream) {
-    camStream.getTracks().forEach(function(t) {
-      t.stop();
+    const response = await fetch('/api/detect/image', {
+      method: 'POST',
+      body: formData
     });
-    camStream = null;
-  }
 
-  document.getElementById('btn-open').disabled = false;
-  document.getElementById('btn-close').disabled = true;
-  document.getElementById('btn-snap').disabled = true;
-}
-
-function snapAndDetect() {
-  var video = document.getElementById('cam-video');
-  var canvas = document.getElementById('cam-canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  sendImg(canvas.toDataURL('image/jpeg', 0.85), 'cam-loading');
-}
-
-function toggleAuto() {
-  var on = document.getElementById('auto-check').checked;
-  if (on) {
-    if (!camStream) {
-      document.getElementById('auto-check').checked = false;
-      alert('请先开启摄像头');
-      return;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.error) {
+      throw new Error(data.error || '检测失败');
     }
-    var interval = parseInt(document.getElementById('auto-interval').value);
-    autoTimer = setInterval(snapAndDetect, interval);
-  } else {
-    if (autoTimer) {
-      clearInterval(autoTimer);
-      autoTimer = null;
-    }
+
+    displayResults(data);
+  } catch (error) {
+    console.error('图片检测失败:', error);
+    alert(`图片检测失败: ${error.message || '未知错误'}`);
+  } finally {
+    setLoading(false);
   }
 }
 
-async function sendImg(imgData, loadId) {
-  showLoad(loadId, true);
+async function detectBase64(imageData) {
+  setLoading(true);
+
   try {
-    var resp = await fetch('/api/detect/base64', {
+    const response = await fetch('/api/detect/base64', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: imgData })
+      body: JSON.stringify({ image: imageData })
     });
-    var data = await resp.json();
-    if (data.success) {
-      showResult(data);
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.error) {
+      throw new Error(data.error || '检测失败');
     }
-  } catch (err) {
+
+    displayResults(data);
+  } catch (error) {
+    console.error('摄像头检测失败:', error);
+  } finally {
+    setLoading(false);
   }
-  showLoad(loadId, false);
 }
 
-function showResult(data) {
-  totalCount++;
-  document.getElementById('count-total').textContent = totalCount;
-
-  var scene = data.scene;
-  var dets = data.detections || [];
-  var hasAlarm = scene.alert_count > 0;
-
-  if (hasAlarm) {
-    alarmCount++;
-    document.getElementById('count-alarm').textContent = alarmCount;
+function displayResults(data) {
+  if (data.success && data.result_image) {
+    document.getElementById('result-img').src = `data:image/jpeg;base64,${data.result_image}`;
+    document.getElementById('result-image').classList.remove('hidden');
   }
 
-  var box = document.getElementById('status-box');
-  if (hasAlarm) {
-    box.className = 'card status-card danger';
-    box.innerHTML =
-      '<div class="status-icon">!</div>' +
-      '<div class="status-title">检测到异常情况</div>' +
-      '<div class="status-tip">请尽快处理以下问题</div>' +
-      '<div class="status-info">共检测到 ' + scene.total + ' 个目标，需关注 ' + scene.alert_count + ' 个<br>' +
-      (scene.alert_types.length ? scene.alert_types.join('、') : '所有目标正常') + '</div>';
+  const detections = Array.isArray(data.detections) ? data.detections : [];
+  if (!detections.length) {
+    document.getElementById('result-empty').classList.remove('hidden');
+    document.getElementById('result-list').classList.add('hidden');
   } else {
-    box.className = 'card status-card';
-    box.innerHTML =
-      '<div class="status-icon">V</div>' +
-      '<div class="status-title">检测正常</div>' +
-      '<div class="status-tip">未发现违规情况</div>' +
-      '<div class="status-info">共检测到 ' + scene.total + ' 个目标</div>';
+    document.getElementById('result-empty').classList.add('hidden');
+    document.getElementById('result-list').classList.remove('hidden');
+    document.getElementById('result-list').innerHTML = detections.map((d) => createResultCard(d)).join('');
   }
 
-  document.getElementById('det-num').textContent = '（' + dets.length + ' 个）';
-
-  var list = document.getElementById('det-list');
-  if (!dets.length) {
-    list.innerHTML = '<div class="empty">未检测到任何目标</div>';
+  const scene = data.scene || null;
+  if (!scene) {
+    document.getElementById('scene-status').classList.add('hidden');
     return;
   }
 
-  var html = '';
-  for (var i = 0; i < dets.length; i++) {
-    var d = dets[i];
-    var conf = d.confidence;
-    var confClass = 'conf-hi';
-    if (conf < 0.8) confClass = 'conf-md';
-    if (conf < 0.6) confClass = 'conf-lo';
+  const statusEl = document.getElementById('scene-status');
+  statusEl.classList.remove('hidden');
 
-    var name = nameMap[d.class_id] || ('类别' + d.class_id);
-    var alarmClass = d.alert ? ' alarm' : '';
-
-    html += '<div class="list-item' + alarmClass + '">' +
-      '<div class="list-name">' + name + '</div>' +
-      '<div class="conf ' + confClass + '">' + (conf * 100).toFixed(1) + '%</div>' +
-    '</div>';
-  }
-  list.innerHTML = html;
-}
-
-function resetStatus() {
-  var box = document.getElementById('status-box');
-  box.className = 'card status-card';
-  box.innerHTML = '<div class="empty">等待上传图片...</div>';
-  document.getElementById('det-list').innerHTML = '<div class="empty">暂无结果</div>';
-  document.getElementById('det-num').textContent = '';
-}
-
-function showLoad(id, on) {
-  var el = document.getElementById(id);
-  if (on) {
-    el.classList.add('on');
+  if ((scene.alert_count || 0) > 0) {
+    statusEl.className = 'mt-6 p-4 rounded-xl border-2 border-red-200 bg-red-50';
+    statusEl.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center pulse-animation">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-bold text-red-700">检测到异常</div>
+          <div class="text-sm text-red-600">${(scene.alert_types || []).join('、') || '请及时处理'}</div>
+        </div>
+      </div>
+    `;
   } else {
-    el.classList.remove('on');
+    statusEl.className = 'mt-6 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50';
+    statusEl.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-bold text-emerald-700">检测正常</div>
+          <div class="text-sm text-emerald-600">未发现异常</div>
+        </div>
+      </div>
+    `;
   }
 }
 
-// 视频上传相关
-var videoInput = document.getElementById('video-input');
-var videoBox = document.getElementById('video-box');
-var videoPreview = document.getElementById('video-preview');
-var videoPlayer = document.getElementById('video-player');
-var videoDetBtn = document.getElementById('video-det-btn');
-var videoLoading = document.getElementById('video-loading');
-var videoResult = document.getElementById('video-result');
-var resultPlayer = document.getElementById('result-player');
-var videoStats = document.getElementById('video-stats');
-var selectedVideoFile = null;
+function createResultCard(detection) {
+  const isAlert = Boolean(detection.alert);
+  const bgColor = isAlert ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100';
+  const badgeClass = isAlert ? 'badge-danger' : 'badge-success';
+  const badgeText = isAlert ? '预警' : '正常';
+  const confidenceColor = isAlert ? 'bg-red-500' : 'bg-emerald-500';
+  const icon = classIconMap[detection.class_id] || classIconMap[detection.class_name] || '📌';
 
-videoInput.addEventListener('change', function(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-
-  selectedVideoFile = file;
-  var url = URL.createObjectURL(file);
-  videoPlayer.src = url;
-  videoPreview.style.display = 'block';
-  videoBox.style.display = 'none';
-  videoResult.style.display = 'none';
-});
-
-videoBox.addEventListener('dragover', function(e) {
-  e.preventDefault();
-  videoBox.style.borderColor = 'var(--green)';
-  videoBox.style.background = 'var(--green2)';
-});
-
-videoBox.addEventListener('dragleave', function(e) {
-  e.preventDefault();
-  videoBox.style.borderColor = '#e0e0e0';
-  videoBox.style.background = 'white';
-});
-
-videoBox.addEventListener('drop', function(e) {
-  e.preventDefault();
-  videoBox.style.borderColor = '#e0e0e0';
-  videoBox.style.background = 'white';
-
-  if (e.dataTransfer.files.length > 0) {
-    var file = e.dataTransfer.files[0];
-    if (file.type.startsWith('video/')) {
-      videoInput.files = e.dataTransfer.files;
-      videoInput.dispatchEvent(new Event('change'));
-    }
-  }
-});
-
-function clearVideo() {
-  videoInput.value = '';
-  selectedVideoFile = null;
-  videoPlayer.src = '';
-  videoPreview.style.display = 'none';
-  videoBox.style.display = 'block';
-  videoResult.style.display = 'none';
-  resetStatus();
+  return `
+    <div class="result-card p-4 rounded-xl ${bgColor} border fade-in">
+      <div class="flex items-start gap-4">
+        <div class="text-3xl">${icon}</div>
+        <div class="flex-1">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-gray-800">${detection.class_name || `类别 ${detection.class_id}`}</span>
+            <span class="badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm text-gray-500">置信度</span>
+            <div class="confidence-bar flex-1">
+              <div class="confidence-fill ${confidenceColor}" style="width: ${(Number(detection.confidence || 0) * 100).toFixed(1)}%"></div>
+            </div>
+            <span class="text-sm font-semibold text-gray-700">${(Number(detection.confidence || 0) * 100).toFixed(1)}%</span>
+          </div>
+          ${Array.isArray(detection.bbox) ? `<div class="text-xs text-gray-400">位置: [${detection.bbox.join(', ')}]</div>` : ''}
+          ${detection.source ? `<div class="text-xs text-gray-400">来源: ${detection.source}</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
-async function doVideoDetect() {
-  if (!selectedVideoFile) {
-    alert('请先选择一段视频');
+async function toggleCamera() {
+  const video = document.getElementById('camera-video');
+  const btn = document.getElementById('btn-camera');
+
+  if (cameraStream) {
+    stopCameraStream();
+    btn.innerHTML = `
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+      </svg>
+      启动摄像头
+    `;
     return;
   }
-
-  videoDetBtn.disabled = true;
-  videoLoading.classList.add('on');
-  videoResult.style.display = 'none';
-
-  var formData = new FormData();
-  formData.append('file', selectedVideoFile);
-  formData.append('skip_frames', 3);
 
   try {
-    var resp = await fetch('/api/detect/video', { method: 'POST', body: formData });
-    var data = await resp.json();
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = cameraStream;
+    document.getElementById('camera-placeholder').classList.add('hidden');
+    btn.innerHTML = `
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+      </svg>
+      关闭摄像头
+    `;
+  } catch (error) {
+    alert('无法访问摄像头，请检查浏览器权限');
+  }
+}
 
-    if (data.success) {
-      resultPlayer.src = '/uploads/' + data.result_video;
-      videoResult.style.display = 'block';
-
-      // 显示统计信息
-      var stats = data.stats || {};
-      var statsHtml = '检测完成！';
-      if (stats.total_frames) {
-        statsHtml += '<br>处理帧数：' + stats.total_frames;
-      }
-      if (stats.total_detections !== undefined) {
-        statsHtml += '<br>检测目标数：' + stats.total_detections;
-      }
-      videoStats.innerHTML = statsHtml;
-
-      showResult(data);
-    } else {
-      alert('检测失败：' + (data.error || '请重试'));
-    }
-  } catch (err) {
-    alert('网络错误，请检查服务是否正常运行');
+function stopCameraStream() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
   }
 
-  videoLoading.classList.remove('on');
-  videoDetBtn.disabled = false;
+  const video = document.getElementById('camera-video');
+  video.srcObject = null;
+  document.getElementById('camera-placeholder').classList.remove('hidden');
+  stopAutoDetect();
 }
-doVideoDetect = async function() {
-  if (!selectedVideoFile) {
-    alert('请先选择一段视频');
+
+function toggleAutoDetect() {
+  const toggle = document.getElementById('auto-toggle');
+  toggle.classList.toggle('active');
+
+  if (toggle.classList.contains('active')) {
+    startAutoDetect();
+  } else {
+    stopAutoDetect();
+  }
+}
+
+function startAutoDetect() {
+  if (!cameraStream) {
+    const toggle = document.getElementById('auto-toggle');
+    toggle.classList.remove('active');
+    alert('请先启动摄像头');
     return;
   }
 
-  videoDetBtn.disabled = true;
-  videoLoading.classList.add('on');
-  videoResult.style.display = 'none';
-
-  var formData = new FormData();
-  formData.append('file', selectedVideoFile);
-  formData.append('skip_frames', 3);
-
-  try {
-    var resp = await fetch('/api/detect/video', { method: 'POST', body: formData });
-    var data = await resp.json();
-
-    if (!resp.ok || !data.success) {
-      throw new Error(data.error || '视频任务提交失败');
-    }
-
-    await pollVideoTaskAsync(data.task_id);
-  } catch (err) {
-    videoLoading.classList.remove('on');
-    videoDetBtn.disabled = false;
-    alert('处理失败：' + (err.message || '请稍后重试'));
+  if (autoDetectInterval) {
+    return;
   }
-};
 
-async function pollVideoTaskAsync(taskId) {
-  while (true) {
-    var resp = await fetch('/api/tasks/' + taskId);
-    var data = await resp.json();
-
-    if (!resp.ok) {
-      throw new Error(data.error || '任务状态查询失败');
-    }
-
-    videoStats.innerHTML = '任务状态：' + data.status + '<br>' +
-      '进度：' + data.progress + '%<br>' +
-      (data.message || '');
-
-    if (data.status === 'completed') {
-      var stats = data.stats || {};
-      resultPlayer.src = '/uploads/' + data.result_video;
-      videoResult.style.display = 'block';
-      videoStats.innerHTML =
-        '处理完成<br>' +
-        '总帧数：' + (stats.total_frames || 0) + '<br>' +
-        '检测目标：' + (stats.total_detections || 0) + '<br>' +
-        '预警次数：' + (stats.total_alerts || 0);
-      videoLoading.classList.remove('on');
-      videoDetBtn.disabled = false;
-      return;
-    }
-
-    if (data.status === 'failed') {
-      throw new Error(data.message || '视频处理失败');
-    }
-
-    await new Promise(function(resolve) { setTimeout(resolve, 1500); });
-  }
+  autoDetectInterval = setInterval(() => {
+    captureAndDetect();
+  }, 1000);
 }
+
+function stopAutoDetect() {
+  if (!autoDetectInterval) {
+    return;
+  }
+  clearInterval(autoDetectInterval);
+  autoDetectInterval = null;
+}
+
+function captureAndDetect() {
+  if (!cameraStream) {
+    alert('请先启动摄像头');
+    return;
+  }
+
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+
+  const imageData = canvas.toDataURL('image/jpeg', 0.85);
+  detectBase64(imageData);
+}
+
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+uploadZone.addEventListener('dragleave', () => {
+  uploadZone.classList.remove('dragover');
+});
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    document.getElementById('file-input').files = e.dataTransfer.files;
+    handleFileSelect({ target: { files: [file] } });
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  stopCameraStream();
+});
 </script>
 
 </body>

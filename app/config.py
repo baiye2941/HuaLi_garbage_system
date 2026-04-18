@@ -37,13 +37,13 @@ class Settings(BaseSettings):
     uploads_dir: Path = BASE_DIR / "uploads"
     templates_dir: Path = BASE_DIR / "templates"
 
-    garbage_pt_model: Path = BASE_DIR / "models" / "garbage_yolov8.pt"
-    fire_pt_model: Path = BASE_DIR / "models" / "fire_yolov8.pt"
-    smoke_pt_model: Path = BASE_DIR / "models" / "smoke_yolov8.pt"
+    garbage_pt_model: Path = BASE_DIR / "models" / "garbege.pt"
+    fire_pt_model: Path = BASE_DIR / "models" / "only_fire.pt"
+    smoke_pt_model: Path = BASE_DIR / "models" / "fire_smoke.pt"
 
-    garbage_onnx_model: Path = BASE_DIR / "models" / "garbage_yolov8.onnx"
-    fire_onnx_model: Path = BASE_DIR / "models" / "fire_yolov8.onnx"
-    smoke_onnx_model: Path = BASE_DIR / "models" / "smoke_yolov8.onnx"
+    garbage_onnx_model: Path = BASE_DIR / "models" / "garbege.onnx"
+    fire_onnx_model: Path = BASE_DIR / "models" / "only_fire.onnx"
+    smoke_onnx_model: Path = BASE_DIR / "models" / "fire_smoke.onnx"
 
     default_conf_threshold: float = 0.5
     default_iou_threshold: float = 0.3
