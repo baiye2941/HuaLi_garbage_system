@@ -22,7 +22,7 @@ settings = get_settings()
 def run_video_task(
     task_id: str,
     input_path: str,
-    skip_frames: int = 3,
+    skip_frames: int = 1,
     progress_callback: Callable[[int], None] | None = None,
 ) -> dict:
     bootstrap_application()
@@ -99,7 +99,7 @@ def run_video_task(
 
 
 @celery_app.task(name="app.tasks.process_video_task", bind=True)
-def process_video_task(self, input_path: str, skip_frames: int = 3) -> dict:
+def process_video_task(self, input_path: str, skip_frames: int = 1) -> dict:
     task_id = self.request.id
     return run_video_task(
         task_id=task_id,

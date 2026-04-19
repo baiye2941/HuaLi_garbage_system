@@ -9,6 +9,7 @@ import numpy as np
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.celery_app import celery_app
 from app.config import Settings
 from app.constants import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS
 from app.database import get_db
@@ -32,6 +33,25 @@ from app.utils import base64_to_frame
 def build_api_router(settings: Settings, started_at: str) -> APIRouter:
     router = APIRouter(prefix=settings.api_prefix)
     record_service = RecordService(settings.uploads_dir)
+
+    def has_celery_worker() -> bool:
+        if settings.celery_task_always_eager:
+            return True
+        try:
+            return bool(celery_app.control.ping(timeout=0.8))
+        except Exception:
+            return False
+
+    def start_local_video_task(task_id: str, input_path: Path, skip_frames: int) -> None:
+        threading.Thread(
+            target=run_video_task,
+            kwargs={
+                "task_id": task_id,
+                "input_path": input_path.as_posix(),
+                "skip_frames": skip_frames,
+            },
+            daemon=True,
+        ).start()
 
     def validate_extension(filename: str, expected: set[str] | None = None) -> str:
         if "." not in filename:
@@ -77,7 +97,8 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
         detection_service: DetectionService = Depends(get_detection_service),
     ) -> dict:
         image = await read_image_file(file)
-        detections = detection_service.apply_cooldown(detection_service.detect(image))
+        # Image upload should alert on every request (no cooldown).
+        detections = detection_service.detect(image)
         rendered = detection_service.draw_boxes(image, detections)
         payload = detection_service.build_response(image, detections, with_image=True)
         record_service.create_alert_record(db, payload["scene"], detections, rendered, source="image")
@@ -94,7 +115,8 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
         except Exception as exc:
             raise HTTPException(status_code=400, detail="图片解析失败") from exc
 
-        detections = detection_service.apply_cooldown(detection_service.detect(image))
+        # Camera/base64 requests follow the same no-cooldown behavior as image upload.
+        detections = detection_service.detect(image)
         rendered = detection_service.draw_boxes(image, detections)
         payload = detection_service.build_response(image, detections, with_image=True)
         record_service.create_alert_record(db, payload["scene"], detections, rendered, source="camera")
@@ -111,6 +133,7 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
         input_dir.mkdir(parents=True, exist_ok=True)
 
         task_id = uuid.uuid4().hex
+        safe_skip_frames = max(skip_frames, 1)
         suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
         input_filename = f"{task_id}{suffix}"
         input_path = input_dir / input_filename
@@ -127,35 +150,30 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
             message="任务已提交，等待处理",
         )
 
-        try:
-            process_video_task.apply_async(
-                kwargs={
-                    "input_path": input_path.as_posix(),
-                    "skip_frames": max(skip_frames, 1),
-                },
-                task_id=task_id,
-            )
-        except Exception:
-            threading.Thread(
-                target=run_video_task,
-                kwargs={
-                    "task_id": task_id,
-                    "input_path": input_path.as_posix(),
-                    "skip_frames": max(skip_frames, 1),
-                },
-                daemon=True,
-            ).start()
-            record_service.update_video_task(
-                db,
-                task_id,
-                message="Redis 不可用，已切换为本地后台线程处理",
-            )
+        dispatch_message = "任务已进入后台处理队列"
+        if has_celery_worker():
+            try:
+                process_video_task.apply_async(
+                    kwargs={
+                        "input_path": input_path.as_posix(),
+                        "skip_frames": safe_skip_frames,
+                    },
+                    task_id=task_id,
+                )
+            except Exception:
+                start_local_video_task(task_id=task_id, input_path=input_path, skip_frames=safe_skip_frames)
+                dispatch_message = "Celery 分发失败，已切换本地线程处理"
+                record_service.update_video_task(db, task_id, message=dispatch_message)
+        else:
+            start_local_video_task(task_id=task_id, input_path=input_path, skip_frames=safe_skip_frames)
+            dispatch_message = "未检测到 Celery worker，已切换本地线程处理"
+            record_service.update_video_task(db, task_id, message=dispatch_message)
 
         return {
             "success": True,
             "task_id": task_id,
             "status": "pending",
-            "message": "视频任务已进入队列",
+            "message": dispatch_message,
         }
 
     @router.get("/tasks/{task_id}", response_model=VideoTaskStatusResponse)
@@ -187,7 +205,6 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
                 "video_info": record.video_info,
             }
         return payload
-
     @router.get("/alerts", response_model=AlertListResponse)
     async def get_alerts(
         page: int = 1,
@@ -245,3 +262,4 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
         }
 
     return router
+

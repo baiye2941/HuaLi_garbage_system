@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from pathlib import Path
 
 import cv2
@@ -13,8 +12,94 @@ class VideoProcessingError(RuntimeError):
 
 
 class VideoProcessingService:
+    VIDEO_IOU_MATCH_THRESHOLD = 0.4
+    VIDEO_GARBAGE_COOLDOWN_SECONDS = 3.0  # overflow/garbage
+    VIDEO_FIRE_SMOKE_COOLDOWN_SECONDS = 1.0  # fire/smoke
+
     def __init__(self, detection_service: DetectionService):
         self.detection_service = detection_service
+
+    @staticmethod
+    def _bgr_to_rgb(frame):
+        # OpenCV uses BGR, while imageio/ffmpeg writer expects RGB arrays.
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    @staticmethod
+    def _compute_iou(box1: list[int], box2: list[int]) -> float:
+        x1 = max(box1[0], box2[0])
+        y1 = max(box1[1], box2[1])
+        x2 = min(box1[2], box2[2])
+        y2 = min(box1[3], box2[3])
+        inter = max(0, x2 - x1) * max(0, y2 - y1)
+        area1 = max(0, box1[2] - box1[0]) * max(0, box1[3] - box1[1])
+        area2 = max(0, box2[2] - box2[0]) * max(0, box2[3] - box2[1])
+        union = area1 + area2 - inter
+        return inter / union if union > 0 else 0.0
+
+    def _cooldown_seconds_for_class(self, class_id: int) -> float:
+        if class_id in (3, 4):  # fire / smoke
+            return self.VIDEO_FIRE_SMOKE_COOLDOWN_SECONDS
+        if class_id in (1, 2):  # overflow / garbage
+            return self.VIDEO_GARBAGE_COOLDOWN_SECONDS
+        return 0.0
+
+    def _apply_video_alert_cooldown(
+        self,
+        detections: list[dict],
+        current_ts: float,
+        alert_history: list[dict],
+    ) -> list[dict]:
+        """
+        Video-only cooldown:
+        - overflow/garbage: same object won't re-alert within 3s
+        - fire/smoke: same object won't re-alert within 1s
+        """
+        updated = []
+
+        for det in detections:
+            item = det.copy()
+            if not item.get("alert", False):
+                updated.append(item)
+                continue
+
+            class_id = int(item.get("class_id", -1))
+            cooldown = self._cooldown_seconds_for_class(class_id)
+            if cooldown <= 0:
+                updated.append(item)
+                continue
+
+            bbox = item.get("bbox", [])
+            has_recent_same_object = False
+            for rec in alert_history:
+                if rec["class_id"] != class_id:
+                    continue
+                if current_ts - rec["timestamp"] > cooldown:
+                    continue
+                if self._compute_iou(bbox, rec["bbox"]) >= self.VIDEO_IOU_MATCH_THRESHOLD:
+                    has_recent_same_object = True
+                    break
+
+            if has_recent_same_object:
+                item["alert"] = False
+            else:
+                alert_history.append(
+                    {
+                        "class_id": class_id,
+                        "bbox": bbox,
+                        "timestamp": current_ts,
+                    }
+                )
+            updated.append(item)
+
+        # Keep alert history bounded to reduce growth.
+        max_keep_window = max(
+            self.VIDEO_GARBAGE_COOLDOWN_SECONDS,
+            self.VIDEO_FIRE_SMOKE_COOLDOWN_SECONDS,
+        )
+        alert_history[:] = [
+            rec for rec in alert_history if current_ts - rec["timestamp"] <= max_keep_window
+        ]
+        return updated
 
     def process_video(
         self,
@@ -39,6 +124,8 @@ class VideoProcessingService:
         total_alerts = 0
         alert_frames = 0
         prev_result = None
+        effective_skip = max(skip_frames, 1)
+        alert_history: list[dict] = []
 
         writer = imageio.get_writer(
             str(output_path),
@@ -55,13 +142,21 @@ class VideoProcessingService:
                     break
 
                 frame_count += 1
-                if frame_count % max(skip_frames, 1) != 1:
-                    writer.append_data(prev_result if prev_result is not None else frame)
+                # Detect on frame 1, 1+skip, 1+2*skip ...
+                # When skip_frames=1, every frame is processed.
+                if (frame_count - 1) % effective_skip != 0:
+                    frame_to_write = prev_result if prev_result is not None else frame
+                    writer.append_data(self._bgr_to_rgb(frame_to_write))
                     if progress_callback and total_frames:
                         progress_callback(frame_count, total_frames)
                     continue
 
                 detections = self.detection_service.detect(frame)
+                detections = self._apply_video_alert_cooldown(
+                    detections=detections,
+                    current_ts=(frame_count / fps) if fps > 0 else 0.0,
+                    alert_history=alert_history,
+                )
                 rendered = self.detection_service.draw_boxes(frame, detections)
                 prev_result = rendered.copy()
 
@@ -80,7 +175,7 @@ class VideoProcessingService:
                     (0, 255, 0),
                     2,
                 )
-                writer.append_data(rendered)
+                writer.append_data(self._bgr_to_rgb(rendered))
 
                 if progress_callback and total_frames:
                     progress_callback(frame_count, total_frames)
