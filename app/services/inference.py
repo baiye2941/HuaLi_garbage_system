@@ -65,6 +65,7 @@ class UltralyticsBackend:
             return
 
         try:
+            self._register_spd_compat()
             from ultralytics import YOLO
 
             self._model = YOLO(str(model_path))
@@ -72,6 +73,35 @@ class UltralyticsBackend:
         except Exception:
             self._model = None
             self.loaded = False
+
+    @staticmethod
+    def _register_spd_compat() -> None:
+        """
+        Register the custom SPD layer name used by some checkpoints.
+        This keeps compatibility with weights trained from modified ultralytics forks.
+        """
+        try:
+            import torch
+            import torch.nn as nn
+            import ultralytics.nn.modules.block as block
+        except Exception:
+            return
+
+        if hasattr(block, "space_to_depth"):
+            return
+
+        class space_to_depth(nn.Module):  # noqa: N801 - keep exact class name for checkpoint lookup
+            def __init__(self, dimension: int = 1):
+                super().__init__()
+                self.d = dimension
+
+            def forward(self, x: torch.Tensor) -> torch.Tensor:
+                return torch.cat(
+                    [x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]],
+                    1,
+                )
+
+        setattr(block, "space_to_depth", space_to_depth)
 
     def predict(self, image: np.ndarray, conf_threshold: float, iou_threshold: float) -> list[RawPrediction]:
         if not self.loaded or self._model is None:

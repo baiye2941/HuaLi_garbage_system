@@ -11,7 +11,7 @@ import numpy as np
 
 from app.config import Settings
 from app.constants import ALL_CLASSES
-from app.services.inference import InferenceBackend, OnnxYoloBackend, RawPrediction, UltralyticsBackend
+from app.services.inference import InferenceBackend, OnnxYoloBackend, UltralyticsBackend
 from app.utils import frame_to_base64
 
 
@@ -68,17 +68,17 @@ class DetectionService:
         return [
             DetectorBundle(
                 key="garbage",
-                class_mapping={0: 0, 1: 1, 2: 2},
+                class_mapping={0: 2, 1: 0, 2: 1},
                 backend=self._select_backend(self.settings.garbage_onnx_model, self.settings.garbage_pt_model),
             ),
             DetectorBundle(
                 key="fire",
-                class_mapping={0: 3, 1: 4},
+                class_mapping={0: 3},
                 backend=self._select_backend(self.settings.fire_onnx_model, self.settings.fire_pt_model),
             ),
             DetectorBundle(
                 key="smoke",
-                class_mapping={0: 4},
+                class_mapping={1: 4},
                 backend=self._select_backend(self.settings.smoke_onnx_model, self.settings.smoke_pt_model),
             ),
         ]
@@ -101,9 +101,15 @@ class DetectionService:
             if bundle.backend is None or not bundle.backend.loaded:
                 continue
 
+            if bundle.key == "fire":
+                conf_threshold = 0.15
+            elif bundle.key == "smoke":
+                conf_threshold = 0.15
+            else:
+                conf_threshold = self.settings.default_conf_threshold
             for prediction in bundle.backend.predict(
                 image=image,
-                conf_threshold=self.settings.default_conf_threshold,
+                conf_threshold=conf_threshold,
                 iou_threshold=self.settings.default_iou_threshold,
             ):
                 class_id = bundle.class_mapping.get(prediction.class_id)
@@ -128,7 +134,42 @@ class DetectionService:
                     },
                 )
 
-        return result_list
+        return self._suppress_garbage_when_fire_overlaps(result_list)
+
+    @staticmethod
+    def _iou(box_a: list[int], box_b: list[int]) -> float:
+        ax1, ay1, ax2, ay2 = box_a
+        bx1, by1, bx2, by2 = box_b
+        inter_x1 = max(ax1, bx1)
+        inter_y1 = max(ay1, by1)
+        inter_x2 = min(ax2, bx2)
+        inter_y2 = min(ay2, by2)
+        inter_w = max(0, inter_x2 - inter_x1)
+        inter_h = max(0, inter_y2 - inter_y1)
+        inter_area = inter_w * inter_h
+        area_a = max(0, ax2 - ax1) * max(0, ay2 - ay1)
+        area_b = max(0, bx2 - bx1) * max(0, by2 - by1)
+        union = area_a + area_b - inter_area
+        return inter_area / union if union > 0 else 0.0
+
+    def _suppress_garbage_when_fire_overlaps(self, detections: list[dict]) -> list[dict]:
+        # If a scattered-garbage box heavily overlaps a fire box, prefer fire and drop garbage.
+        overlap_threshold = 0.35
+        fire_boxes = [d["bbox"] for d in detections if d["class_id"] == 3]
+        if not fire_boxes:
+            return detections
+
+        filtered: list[dict] = []
+        for det in detections:
+            if det["class_id"] != 2:
+                filtered.append(det)
+                continue
+
+            has_near_fire = any(self._iou(det["bbox"], fire_box) >= overlap_threshold for fire_box in fire_boxes)
+            if not has_near_fire:
+                filtered.append(det)
+
+        return filtered
 
     def _fake_detect(self, image: np.ndarray) -> list[dict]:
         h, w = image.shape[:2]

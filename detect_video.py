@@ -153,11 +153,11 @@ def main():
 
     # 默认模型路径
     if args.garbage is None:
-        args.garbage = "app/models/garbage_yolov8.pt"
+        args.garbage = "app/models/garbege.pt"
     if args.fire is None:
-        args.fire = "app/models/fire_yolov8.pt"
+        args.fire = "app/models/fire_smoke.pt"
     if args.smoke is None:
-        args.smoke = "app/models/smoke_yolov8.pt"
+        args.smoke = "app/models/fire_smoke.pt"
 
     detect_video(
         input_path=args.input,

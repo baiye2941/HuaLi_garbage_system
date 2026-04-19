@@ -28,9 +28,9 @@ app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 最大200MB
 app.secret_key = "my_secret_key_123"
 
 # ===== 模型路径 =====
-garbage_model_file = os.path.join(BASE_DIR, "models", "garbage_yolov8.pt")
-fire_model_file    = os.path.join(BASE_DIR, "models", "fire_yolov8.pt")
-smoke_model_file   = os.path.join(BASE_DIR, "models", "smoke_yolov8.pt")
+garbage_model_file = os.path.join(BASE_DIR, "models", "garbege.pt")
+fire_model_file    = os.path.join(BASE_DIR, "models", "fire_smoke.pt")
+smoke_model_file   = os.path.join(BASE_DIR, "models", "fire_smoke.pt")
 
 # ===== 初始化检测器 =====
 detector = MyDetector(
