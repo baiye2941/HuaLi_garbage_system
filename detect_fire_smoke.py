@@ -1,6 +1,4 @@
-"""
-同时使用火和烟雾检测模型进行推理
-"""
+
 
 import cv2
 import numpy as np
@@ -9,17 +7,12 @@ import os
 
 class FireSmokeDetector:
     def __init__(self, fire_model_path=None, smoke_model_path=None):
-        """
-        初始化火和烟雾检测器
-        
-        Args:
-            fire_model_path: 火检测模型路径 (如果不提供则使用默认模型)
-            smoke_model_path: 烟雾检测模型路径 (如果不提供则使用默认模型)
-        """
+
+
         self.fire_model = None
         self.smoke_model = None
         
-        # 尝试加载预训练模型
+
         try:
             if fire_model_path and os.path.exists(fire_model_path):
                 print(f"加载火检测模型: {fire_model_path}")
@@ -39,25 +32,14 @@ class FireSmokeDetector:
             print(f"模型加载失败: {e}")
     
     def detect(self, image_path, conf_threshold=0.3):
-        """
-        检测图片中的火和烟雾
-        
-        Args:
-            image_path: 图片路径
-            conf_threshold: 置信度阈值
-            
-        Returns:
-            result_image: 带标注的结果图片
-            fire_results: 火焰检测结果列表
-            smoke_results: 烟雾检测结果列表
-        """
-        # 读取图片
+
+
         img = cv2.imread(image_path)
         if img is None:
             print(f"无法读取图片: {image_path}")
             return None, [], []
         
-        # 检测火焰
+
         fire_results = []
         if self.fire_model:
             fire_detections = self.fire_model(img, conf=conf_threshold)[0]
@@ -66,7 +48,7 @@ class FireSmokeDetector:
                 conf = box.conf[0].cpu().numpy()
                 cls = int(box.cls[0].cpu().numpy())
                 
-                # YOLO类别名
+
                 cls_name = "fire"
                 
                 fire_results.append({
@@ -76,14 +58,14 @@ class FireSmokeDetector:
                     'class_name': cls_name
                 })
                 
-                # 在图片上绘制火焰框（红色）
+
                 x1, y1, x2, y2 = map(int, xyxy)
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
                 label = f"Fire: {conf:.2f}"
                 cv2.putText(img, label, (x1, y1-10), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         
-        # 检测烟雾
+
         smoke_results = []
         if self.smoke_model:
             smoke_detections = self.smoke_model(img, conf=conf_threshold)[0]
@@ -92,7 +74,7 @@ class FireSmokeDetector:
                 conf = box.conf[0].cpu().numpy()
                 cls = int(box.cls[0].cpu().numpy())
                 
-                # YOLO类别名
+
                 cls_name = "smoke"
                 
                 smoke_results.append({
@@ -102,7 +84,7 @@ class FireSmokeDetector:
                     'class_name': cls_name
                 })
                 
-                # 在图片上绘制烟雾框（蓝色）
+
                 x1, y1, x2, y2 = map(int, xyxy)
                 cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
                 label = f"Smoke: {conf:.2f}"
@@ -112,17 +94,8 @@ class FireSmokeDetector:
         return img, fire_results, smoke_results
     
     def process_folder(self, folder_path, output_folder=None, conf_threshold=0.3):
-        """
-        处理文件夹中的所有图片
-        
-        Args:
-            folder_path: 输入文件夹路径
-            output_folder: 输出文件夹路径
-            conf_threshold: 置信度阈值
-            
-        Returns:
-            处理统计信息
-        """
+
+
         if not os.path.exists(folder_path):
             print(f"文件夹不存在: {folder_path}")
             return
@@ -131,7 +104,7 @@ class FireSmokeDetector:
             output_folder = os.path.join(folder_path, "detections")
         os.makedirs(output_folder, exist_ok=True)
         
-        # 支持的图片格式
+
         image_exts = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']
         
         stats = {
@@ -155,11 +128,11 @@ class FireSmokeDetector:
             )
             
             if result_img is not None:
-                # 保存结果
+
                 output_path = os.path.join(output_folder, f"detected_{filename}")
                 cv2.imwrite(output_path, result_img)
                 
-                # 更新统计
+
                 stats['total_images'] += 1
                 if fire_results:
                     stats['images_with_fire'] += 1
@@ -180,10 +153,10 @@ class FireSmokeDetector:
         return stats
 
 def main():
-    # 创建检测器（训练后可以指定模型路径）
+
     detector = FireSmokeDetector()
     
-    # 测试用单张图片
+
     test_image = "d:/garbage_system/dataset_fire_5images/images/111.png"
     
     if os.path.exists(test_image):
@@ -191,7 +164,7 @@ def main():
         result_img, fire_results, smoke_results = detector.detect(test_image)
         
         if result_img is not None:
-            # 保存结果
+
             output_path = "d:/garbage_system/fire_smoke_detection_result.jpg"
             cv2.imwrite(output_path, result_img)
             print(f"结果保存到: {output_path}")

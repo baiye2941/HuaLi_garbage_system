@@ -1,55 +1,46 @@
-"""
-YOLOv8 训练脚本 - 社区垃圾分类检测系统
-基于真实数据集（3349张图，3类目标）训练
 
-使用前安装:
-  pip install ultralytics
 
-运行:
-  py -3 D:\garbage_system\train_yolo.py
-"""
 import os
 import subprocess
 import sys
 
-# ===================== 训练配置 =====================
+
 DATASET_YAML = r'D:/garbage_system/dataset/dataset.yaml'
 MODEL_OUT    = r'D:/garbage_system/app/models'
 RUN_NAME     = 'garbage_yolov8'
 
-# YOLOv8 训练超参数（根据算力调整）
+
 TRAIN_CONFIG = {
-    'model':    'yolov8n.pt',   # nano 模型（轻量，适合入门）；也可换 yolov8s.pt
+    'model':    'yolov8n.pt',
     'data':     DATASET_YAML,
     'epochs':   100,
     'imgsz':    640,
-    'batch':    16,             # 显存不足时改为 8
-    'device':   0,              # 0=GPU，'cpu'=CPU（无显卡时用 cpu）
+    'batch':    16,
+    'device':   0,
     'workers':  4,
     'project':  MODEL_OUT,
     'name':     RUN_NAME,
     'exist_ok': True,
-    'patience': 20,             # 20 轮无提升则早停
+    'patience': 20,
     'save':     True,
     'plots':    True,
-    'cache':    False,          # 内存充足时改 True 加速
-    'augment':  True,           # 数据增强
-    'degrees':  10,             # 旋转增强
-    'flipud':   0.3,            # 上下翻转概率
-    'fliplr':   0.5,            # 左右翻转概率
-    'mosaic':   0.8,            # mosaic 增强
-    'mixup':    0.1,            # mixup 增强
+    'cache':    False,
+    'augment':  True,
+    'degrees':  10,
+    'flipud':   0.3,
+    'fliplr':   0.5,
+    'mosaic':   0.8,
+    'mixup':    0.1,
 }
 
-# ===================== 验证环境 =====================
 
 def check_env():
-    """检查环境是否满足训练条件"""
+
     print("=" * 55)
     print("  YOLOv8 训练环境检测")
     print("=" * 55)
 
-    # 检查 ultralytics
+
     try:
         import ultralytics
         print(f"[OK] ultralytics {ultralytics.__version__}")
@@ -59,7 +50,7 @@ def check_env():
         import ultralytics
         print(f"[OK] ultralytics {ultralytics.__version__} 安装完成")
 
-    # 检查 torch + CUDA
+
     try:
         import torch
         cuda_ok = torch.cuda.is_available()
@@ -71,7 +62,7 @@ def check_env():
     except ImportError:
         print("[提示] PyTorch 未安装，ultralytics 会自动处理")
 
-    # 检查数据集
+
     if not os.path.exists(DATASET_YAML):
         print(f"[ERROR] 数据集不存在: {DATASET_YAML}")
         print("请先运行: py -3 D:\\garbage_system\\convert_voc2yolo.py")
@@ -86,10 +77,8 @@ def check_env():
     return True
 
 
-# ===================== 开始训练 =====================
-
 def train():
-    """执行 YOLOv8 训练"""
+
     from ultralytics import YOLO
 
     print("\n" + "=" * 55)
@@ -103,7 +92,7 @@ def train():
 
     results = model.train(**TRAIN_CONFIG)
 
-    # 最佳模型路径
+
     best_model = os.path.join(MODEL_OUT, RUN_NAME, 'weights', 'best.pt')
     system_model = os.path.join(MODEL_OUT, 'garbage_yolov8.pt')
 
@@ -118,10 +107,8 @@ def train():
     return results
 
 
-# ===================== 验证 =====================
-
 def validate():
-    """验证已训练模型的性能"""
+
     from ultralytics import YOLO
 
     model_path = os.path.join(MODEL_OUT, RUN_NAME, 'weights', 'best.pt')

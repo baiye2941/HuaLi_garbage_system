@@ -1,4 +1,4 @@
-"""分析 VOC XML 数据集标签分布"""
+
 import os
 import xml.etree.ElementTree as ET
 from collections import Counter

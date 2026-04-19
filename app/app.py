@@ -1,7 +1,5 @@
-"""
-社区垃圾分类识别系统 - Flask 主程序
-包含页面路由和接口
-"""
+
+
 import os
 import cv2
 import json
@@ -17,22 +15,22 @@ from werkzeug.utils import secure_filename
 
 from detector import MyDetector, frame_to_base64, ALL_CLASSES, BIN_TYPES
 
-# ===== 基础配置 =====
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "bmp", "mp4", "avi", "mov"}
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 最大200MB
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
 app.secret_key = "my_secret_key_123"
 
-# ===== 模型路径 =====
+
 garbage_model_file = os.path.join(BASE_DIR, "models", "garbege.pt")
 fire_model_file    = os.path.join(BASE_DIR, "models", "fire_smoke.pt")
 smoke_model_file   = os.path.join(BASE_DIR, "models", "fire_smoke.pt")
 
-# ===== 初始化检测器 =====
+
 detector = MyDetector(
     garbage_model_path=garbage_model_file,
     fire_model_path=fire_model_file,
@@ -41,31 +39,31 @@ detector = MyDetector(
     iou_threshold=0.3
 )
 
-# ===== 运行数据存储 =====
-alert_records = []  # 预警记录列表，最多保存500条
+
+alert_records = []
 
 run_stats = {
-    "total_count": 0,     # 总检测次数
-    "alert_count": 0,     # 总预警次数
-    "today_count": 0,     # 今日预警次数
-    "class_nums":  {cid: 0 for cid in ALL_CLASSES},  # 各类别检测次数
-    "hour_data":   [0] * 24,  # 24小时各小时预警次数
+    "total_count": 0,
+    "alert_count": 0,
+    "today_count": 0,
+    "class_nums":  {cid: 0 for cid in ALL_CLASSES},
+    "hour_data":   [0] * 24,
     "start_time":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
 }
 
 data_lock = threading.Lock()
 
-# ===== 警报冷却管理器 =====
+
 class AlertCooldown:
-    """线程安全的警报冷却管理器"""
-    # 冷却时间配置（秒）
+
+
     COOLDOWN_CONFIG = {
-        # 垃圾类别（溢出、散落垃圾）
-        "overflow": 15 * 60,   # 垃圾溢出 15 分钟
-        "garbage":  15 * 60,   # 散落垃圾 15 分钟
-        # 火情/烟雾类别
-        "fire":     90,        # 1.5 分钟
-        "smoke":    90,        # 1.5 分钟
+
+        "overflow": 15 * 60,
+        "garbage":  15 * 60,
+
+        "fire":     90,
+        "smoke":    90,
     }
 
     def __init__(self):
@@ -73,8 +71,8 @@ class AlertCooldown:
         self._lock = threading.Lock()
 
     def _get_cooldown_seconds(self, class_id: int) -> int:
-        """根据类别id获取冷却秒数"""
-        # 从 ALL_CLASSES 获取类别名
+
+
         class_name = ALL_CLASSES.get(class_id, {}).get("name", "")
         if class_name == "垃圾溢出":
             return self.COOLDOWN_CONFIG["overflow"]
@@ -85,22 +83,20 @@ class AlertCooldown:
         elif class_name == "烟雾":
             return self.COOLDOWN_CONFIG["smoke"]
         else:
-            # 默认 15 分钟（安全）
+
             return 15 * 60
 
     def can_alert(self, class_id: int) -> bool:
-        """
-        检查该类别的检测结果是否可以触发警报
-        返回 True 表示允许报警（未冷却或已过冷却期）
-        """
+
+
         cooldown = self._get_cooldown_seconds(class_id)
-        # 使用类别id作为key，确保不同类别独立冷却
+
         key = class_id
         with self._lock:
             now = time.time()
             last = self._last_alert_time.get(key, 0)
             if now - last >= cooldown:
-                # 更新最后报警时间
+
                 self._last_alert_time[key] = now
                 return True
             else:
@@ -109,21 +105,21 @@ class AlertCooldown:
                 return False
 
     def reset_category(self, class_id: int):
-        """手动重置某个类别的冷却（用于测试）"""
+
         with self._lock:
             self._last_alert_time.pop(class_id, None)
 
-# 全局冷却管理器实例
+
 cooldown_manager = AlertCooldown()
 
 
 def check_ext(filename):
-    """判断文件后缀是否允许上传"""
+
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
 
 
 def add_alert_record(scene_info, det_list, img_b64=None):
-    """保存一条检测记录到 alert_records"""
+
     global run_stats
     rec = {
         "id":     str(uuid.uuid4())[:8],
@@ -151,8 +147,6 @@ def add_alert_record(scene_info, det_list, img_b64=None):
             run_stats["class_nums"][cid] += 1
 
 
-# ===== 页面路由 =====
-
 @app.route("/")
 def page_index():
     return render_template("index.html")
@@ -178,11 +172,9 @@ def page_dataset():
     return render_template("dataset.html")
 
 
-# ===== 检测接口 =====
-
 @app.route("/api/detect/image", methods=["POST"])
 def api_detect_image():
-    """接收上传的图片文件，进行检测"""
+
     if "file" not in request.files:
         return jsonify({"error": "未上传文件"}), 400
 
@@ -190,25 +182,25 @@ def api_detect_image():
     if not f or not check_ext(f.filename):
         return jsonify({"error": "文件格式不支持"}), 400
 
-    # 读取图片
+
     img_bytes = f.read()
     arr = np.frombuffer(img_bytes, dtype=np.uint8)
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if img is None:
         return jsonify({"error": "图片解析失败"}), 400
 
-    # 检测
+
     det_list = detector.detect(img)
 
-    # ---- 冷却过滤：只保留允许报警的检测结果 ----
+
     filtered_det_list = []
     for d in det_list:
         if d["alert"]:
-            # 只有需要报警的目标才检查冷却
+
             if cooldown_manager.can_alert(d["class_id"]):
                 filtered_det_list.append(d)
             else:
-                # 被冷却抑制：将 alert 标记改为 False，但保留在列表中（前端仍显示框但不触发报警）
+
                 d_copy = d.copy()
                 d_copy["alert"] = False
                 filtered_det_list.append(d_copy)
@@ -219,7 +211,7 @@ def api_detect_image():
     result_img = detector.draw_boxes(img, filtered_det_list)
     result_b64 = frame_to_base64(result_img)
 
-    # 有预警才保存记录（注意 scene_info 中的 alert_count 是基于过滤后的）
+
     if scene_info["alert_count"] > 0:
         add_alert_record(scene_info, filtered_det_list, result_b64)
 
@@ -241,7 +233,7 @@ def api_detect_image():
 
 @app.route("/api/detect/base64", methods=["POST"])
 def api_detect_base64():
-    """接收 base64 格式图片，进行检测（摄像头模式使用）"""
+
     req_data = request.get_json()
     if not req_data or "image" not in req_data:
         return jsonify({"error": "缺少图片数据"}), 400
@@ -262,7 +254,7 @@ def api_detect_base64():
 
     det_list = detector.detect(img)
 
-    # ---- 冷却过滤：只保留允许报警的检测结果 ----
+
     filtered_det_list = []
     for d in det_list:
         if d["alert"]:
@@ -298,11 +290,9 @@ def api_detect_base64():
     })
 
 
-# ===== 视频检测接口 =====
-
 @app.route("/video")
 def page_video():
-    """视频检测页面"""
+
     return render_template("video.html")
 
 
@@ -342,20 +332,20 @@ def api_detect_video():
     if fps <= 0 or fps > 120:
         fps = 30.0
 
-    # ========== 使用 imageio 创建 H.264 编码器 ==========
+
     import imageio
-    # 确保使用 ffmpeg 后端
+
     writer = imageio.get_writer(
         output_path,
         fps=fps,
-        codec='libx264',       # H.264 编码
-        quality=8,             # 质量 0-10，越高越好
-        pixelformat='yuv420p'  # 兼容浏览器
+        codec='libx264',
+        quality=8,
+        pixelformat='yuv420p'
     )
 
     skip_frames = int(request.form.get("skip_frames", 3))
 
-    # 跟踪抑制参数
+
     tracked_objects = []
     alarm_history = []
     IOU_MATCH_THRESH = 0.4
@@ -387,7 +377,7 @@ def api_detect_video():
             frame_count += 1
             current_time = frame_count / fps
 
-            # 跳帧
+
             if frame_count % skip_frames != 1:
                 if prev_result_img is not None:
                     writer.append_data(prev_result_img)
@@ -397,7 +387,7 @@ def api_detect_video():
 
             det_list = detector.detect(frame)
 
-            # 跟踪抑制逻辑
+
             matched_indices = set()
             new_alerts = []
 
@@ -454,7 +444,7 @@ def api_detect_video():
             cv2.putText(result_img, info_text, (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-            # 将 OpenCV BGR 转为 RGB（imageio 需要 RGB）
+
             result_img_rgb = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
             writer.append_data(result_img_rgb)
             prev_result_img = result_img_rgb
@@ -489,32 +479,30 @@ def api_detect_video():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    """提供视频文件下载，支持浏览器播放"""
+
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if not os.path.exists(filepath):
         return "文件不存在", 404
-    # 根据扩展名设置 MIME
+
     if filename.endswith('.mp4'):
         mimetype = 'video/mp4'
     else:
         mimetype = 'application/octet-stream'
     response = send_from_directory(app.config['UPLOAD_FOLDER'], filename, mimetype=mimetype)
-    # 允许浏览器缓存和范围请求（支持拖拽进度条）
+
     response.headers['Accept-Ranges'] = 'bytes'
     response.headers['Cache-Control'] = 'no-cache'
     return response
 
 
-# ===== 记录接口 =====
-
 @app.route("/api/alerts")
 def api_get_alerts():
-    """分页查询检测记录"""
+
     page        = int(request.args.get("page", 1))
     per_page    = int(request.args.get("per_page", 20))
     status_val  = request.args.get("status", "all")
 
-    # 根据状态过滤
+
     if status_val == "all":
         filtered = alert_records
     elif status_val == "warning":
@@ -525,7 +513,7 @@ def api_get_alerts():
     total_num = len(filtered)
     start_idx = (page - 1) * per_page
     end_idx   = start_idx + per_page
-    # 返回时不包含图片字段（图片单独查询）
+
     page_data = [{k: v for k, v in r.items() if k != "image"} for r in filtered[start_idx:end_idx]]
 
     return jsonify({
@@ -538,18 +526,16 @@ def api_get_alerts():
 
 @app.route("/api/alerts/<rec_id>/image")
 def api_get_alert_image(rec_id):
-    """获取某条记录的截图"""
+
     rec = next((r for r in alert_records if r["id"] == rec_id), None)
     if not rec or not rec.get("image"):
         return jsonify({"error": "记录不存在"}), 404
     return jsonify({"image": rec["image"]})
 
 
-# ===== 统计接口 =====
-
 @app.route("/api/statistics")
 def api_get_stats():
-    """获取统计数据"""
+
     cls_list = []
     for cid, num in run_stats["class_nums"].items():
         if num > 0:
@@ -575,7 +561,7 @@ def api_get_stats():
 
 @app.route("/api/classes")
 def api_get_classes():
-    """获取所有类别信息"""
+
     cls_list = []
     for cid, info in ALL_CLASSES.items():
         cls_list.append({
@@ -588,11 +574,9 @@ def api_get_classes():
     return jsonify({"classes": cls_list, "bin_types": BIN_TYPES})
 
 
-# ===== 系统状态 =====
-
 @app.route("/api/status")
 def api_get_status():
-    """获取系统当前状态"""
+
     return jsonify({
         "model_loaded":   any(detector.models_loaded.values()),
         "garbage_model":  detector.models_loaded.get("garbage", False),

@@ -1,16 +1,14 @@
-"""
-测试视频处理功能
-先用一个测试视频检查是否有问题
-"""
+
+
 import os
 import cv2
 
-# 测试1: 检查OpenCV视频读取
+
 print("=" * 50)
 print("测试1: OpenCV视频支持")
 print("=" * 50)
 
-# 列出可用的视频编解码器
+
 fourcc_values = ['mp4v', 'XVID', 'MJPG', 'X264', 'H264']
 print("支持的编码器:")
 for codec in fourcc_values:

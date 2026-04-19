@@ -1,14 +1,5 @@
-"""
-社区垃圾分类识别系统 - 核心检测模块
-支持图片/视频流检测，输出目标检测结果和预警状态
 
-数据集类别说明:
-  0: garbage_bin  - 垃圾桶（正常）
-  1: overflow     - 垃圾溢出（触发预警）
-  2: garbage      - 散落垃圾（触发预警）
-  3: fire         - 火焰（触发预警）
-  4: smoke        - 烟雾（触发预警）
-"""
+
 import os
 import cv2
 import time
@@ -17,8 +8,7 @@ import base64
 import numpy as np
 from datetime import datetime
 
-# ===== 类别定义 =====
-# 每个类别包含：中文名、英文名、绘制颜色、是否预警
+
 ALL_CLASSES = {
     0: {"name": "垃圾桶",   "en": "garbage_bin", "color": (50, 200, 50),  "alert": False, "icon": ""},
     1: {"name": "垃圾溢出", "en": "overflow",    "color": (0,   0,   255), "alert": True,  "icon": ""},
@@ -27,10 +17,10 @@ ALL_CLASSES = {
     4: {"name": "烟雾",     "en": "smoke",       "color": (255, 128, 0),  "alert": True,  "icon": ""},
 }
 
-# 需要预警的类别id集合
+
 ALERT_ID_SET = {cid for cid, info in ALL_CLASSES.items() if info["alert"]}
 
-# 垃圾桶类型定义（用于投放引导）
+
 BIN_TYPES = {
     "recyclable": {"name": "可回收垃圾桶", "color": "#2196F3", "classes": [0]},
     "hazardous":  {"name": "有害垃圾桶",   "color": "#F44336", "classes": [3]},
@@ -40,11 +30,7 @@ BIN_TYPES = {
 
 
 class MyDetector:
-    """
-    统一检测器
-    同时加载三个模型：垃圾分类模型、火焰检测模型、烟雾检测模型
-    如果模型文件不存在则自动进入演示模式
-    """
+
 
     def __init__(self,
                  garbage_model_path=None,
@@ -55,12 +41,12 @@ class MyDetector:
         self.conf_threshold = conf_threshold
         self.iou_threshold  = iou_threshold
 
-        # 三个模型对象
+
         self.garbage_model = None
         self.fire_model    = None
         self.smoke_model   = None
 
-        # 记录哪些模型加载成功了
+
         self.models_loaded = {
             "garbage": False,
             "fire":    False,
@@ -70,11 +56,11 @@ class MyDetector:
         self._load_models(garbage_model_path, fire_model_path, smoke_model_path)
 
     def _load_models(self, garbage_path, fire_path, smoke_path):
-        """依次加载三个模型文件"""
+
         try:
             from ultralytics import YOLO
 
-            # 垃圾分类模型
+
             if garbage_path and os.path.exists(garbage_path):
                 try:
                     self.garbage_model = YOLO(garbage_path)
@@ -83,7 +69,7 @@ class MyDetector:
                 except Exception as err:
                     print("[检测模块] 垃圾分类模型加载失败:", err)
 
-            # 火焰检测模型
+
             if fire_path and os.path.exists(fire_path):
                 try:
                     self.fire_model = YOLO(fire_path)
@@ -92,7 +78,7 @@ class MyDetector:
                 except Exception as err:
                     print("[检测模块] 火焰检测模型加载失败:", err)
 
-            # 烟雾检测模型
+
             if smoke_path and os.path.exists(smoke_path):
                 try:
                     self.smoke_model = YOLO(smoke_path)
@@ -109,22 +95,20 @@ class MyDetector:
             print("  安装命令: pip install ultralytics")
 
     def detect(self, img):
-        """
-        对一张图片进行检测
-        返回: 检测结果列表，每项包含 class_id、class_name、confidence、bbox、alert 等字段
-        """
+
+
         if any(self.models_loaded.values()):
             return self._run_yolo(img)
         else:
             return self._fake_detect(img)
 
     def _run_yolo(self, img):
-        """调用真实的 YOLOv8 模型进行推理"""
+
         result_list = []
         h, w = img.shape[:2]
-        min_box_area = w * h * 0.005  # 过滤面积小于0.5%的框
+        min_box_area = w * h * 0.005
 
-        # --- 垃圾分类模型 ---
+
         if self.models_loaded["garbage"] and self.garbage_model is not None:
             yolo_out = self.garbage_model(img, conf=self.conf_threshold, iou=self.iou_threshold)[0]
             for box in yolo_out.boxes:
@@ -145,18 +129,18 @@ class MyDetector:
                     "source_model": "garbage",
                 })
 
-        # --- 火焰检测模型 ---
+
         if self.models_loaded["fire"] and self.fire_model is not None:
             yolo_out = self.fire_model(img, conf=self.conf_threshold, iou=self.iou_threshold)[0]
             for box in yolo_out.boxes:
                 cid = int(box.cls[0])
-                if cid != 0:  # 火焰模型里 fire=0
+                if cid != 0:
                     continue
                 conf = float(box.conf[0])
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 if (x2 - x1) * (y2 - y1) < min_box_area:
                     continue
-                info = ALL_CLASSES[3]  # 统一映射为系统id=3（火焰）
+                info = ALL_CLASSES[3]
                 result_list.append({
                     "class_id":     3,
                     "class_name":   info["name"],
@@ -168,18 +152,18 @@ class MyDetector:
                     "source_model": "fire",
                 })
 
-        # --- 烟雾检测模型 ---
+
         if self.models_loaded["smoke"] and self.smoke_model is not None:
             yolo_out = self.smoke_model(img, conf=self.conf_threshold, iou=self.iou_threshold)[0]
             for box in yolo_out.boxes:
                 cid = int(box.cls[0])
-                if cid != 0:  # 烟雾模型里 smoke=0
+                if cid != 0:
                     continue
                 conf = float(box.conf[0])
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 if (x2 - x1) * (y2 - y1) < min_box_area:
                     continue
-                info = ALL_CLASSES[4]  # 统一映射为系统id=4（烟雾）
+                info = ALL_CLASSES[4]
                 result_list.append({
                     "class_id":     4,
                     "class_name":   info["name"],
@@ -194,7 +178,7 @@ class MyDetector:
         return result_list
 
     def _fake_detect(self, img):
-        """演示模式：根据图像内容随机生成检测结果"""
+
         h, w = img.shape[:2]
         result_list = []
         seed_val = int(img[h // 2, w // 2, 0]) if img.ndim == 3 else 0
@@ -225,9 +209,9 @@ class MyDetector:
         return result_list
 
     def draw_boxes(self, img, det_list):
-        """在图像上画出检测框和标签"""
+
         output_img = img.copy()
-        # 英文标签映射（OpenCV 不支持中文）
+
         en_label_map = {
             "垃圾桶":   "GarbageBin",
             "垃圾溢出": "Overflow",
@@ -254,10 +238,8 @@ class MyDetector:
         return output_img
 
     def check_scene(self, det_list):
-        """
-        分析当前场景，汇总预警情况
-        优先级顺序：火焰 > 烟雾 > 垃圾溢出 > 散落垃圾 > 正常
-        """
+
+
         alarm_list  = [d for d in det_list if d["alert"]]
         alarm_types = list({d["class_name"] for d in alarm_list})
         cid_set     = {d["class_id"] for d in det_list}
@@ -281,7 +263,7 @@ class MyDetector:
             "timestamp":    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
-    # 兼容旧接口的别名
+
     def draw_results(self, img, det_list):
         return self.draw_boxes(img, det_list)
 
@@ -289,20 +271,19 @@ class MyDetector:
         return self.check_scene(det_list)
 
 
-# ===== 兼容旧代码 =====
 UnifiedDetector = MyDetector
 GarbageDetector = MyDetector
 GARBAGE_CLASSES = ALL_CLASSES
 
 
 def frame_to_base64(img):
-    """把 OpenCV 图像转成 base64 字符串（用于前端显示）"""
+
     _, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
     return base64.b64encode(buf).decode("utf-8")
 
 
 def base64_to_frame(b64_str):
-    """把 base64 字符串还原为 numpy 图像数组"""
+
     img_bytes = base64.b64decode(b64_str)
     arr = np.frombuffer(img_bytes, dtype=np.uint8)
     return cv2.imdecode(arr, cv2.IMREAD_COLOR)
