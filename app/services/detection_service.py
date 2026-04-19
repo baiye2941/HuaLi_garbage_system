@@ -106,7 +106,10 @@ class DetectionService:
             elif bundle.key == "smoke":
                 conf_threshold = 0.15
             else:
-                conf_threshold = self.settings.default_conf_threshold
+                conf_threshold = min(
+                    self.settings.default_conf_threshold,
+                    self.settings.garbage_bin_conf_threshold,
+                )
             for prediction in bundle.backend.predict(
                 image=image,
                 conf_threshold=conf_threshold,
@@ -114,6 +117,15 @@ class DetectionService:
             ):
                 class_id = bundle.class_mapping.get(prediction.class_id)
                 if class_id is None:
+                    continue
+
+                # Class-specific confidence:
+                # garbage_bin (class_id=0) uses garbage_bin_conf_threshold,
+                # other garbage-model classes keep default_conf_threshold.
+                if class_id == 0:
+                    if prediction.confidence < self.settings.garbage_bin_conf_threshold:
+                        continue
+                elif bundle.key == "garbage" and prediction.confidence < self.settings.default_conf_threshold:
                     continue
 
                 x1, y1, x2, y2 = prediction.bbox

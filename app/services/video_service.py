@@ -16,6 +16,11 @@ class VideoProcessingService:
     def __init__(self, detection_service: DetectionService):
         self.detection_service = detection_service
 
+    @staticmethod
+    def _bgr_to_rgb(frame):
+        # OpenCV uses BGR, while imageio/ffmpeg writer expects RGB arrays.
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
     def process_video(
         self,
         input_path: Path,
@@ -39,6 +44,7 @@ class VideoProcessingService:
         total_alerts = 0
         alert_frames = 0
         prev_result = None
+        effective_skip = max(skip_frames, 1)
 
         writer = imageio.get_writer(
             str(output_path),
@@ -55,8 +61,11 @@ class VideoProcessingService:
                     break
 
                 frame_count += 1
-                if frame_count % max(skip_frames, 1) != 1:
-                    writer.append_data(prev_result if prev_result is not None else frame)
+                # Detect on frame 1, 1+skip, 1+2*skip ...
+                # When skip_frames=1, every frame is processed.
+                if (frame_count - 1) % effective_skip != 0:
+                    frame_to_write = prev_result if prev_result is not None else frame
+                    writer.append_data(self._bgr_to_rgb(frame_to_write))
                     if progress_callback and total_frames:
                         progress_callback(frame_count, total_frames)
                     continue
@@ -80,7 +89,7 @@ class VideoProcessingService:
                     (0, 255, 0),
                     2,
                 )
-                writer.append_data(rendered)
+                writer.append_data(self._bgr_to_rgb(rendered))
 
                 if progress_callback and total_frames:
                     progress_callback(frame_count, total_frames)

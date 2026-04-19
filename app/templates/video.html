@@ -431,7 +431,7 @@ async function startDetection() {
 
   const formData = new FormData();
   formData.append('file', selectedVideo);
-  formData.append('skip_frames', '3');
+  formData.append('skip_frames', '1');
 
   try {
     const response = await fetch('/api/detect/video', {
