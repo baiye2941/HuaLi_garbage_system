@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import random
 import time
@@ -68,6 +68,7 @@ class DetectionService:
         return [
             DetectorBundle(
                 key="garbage",
+                # Garbage model class order: 0=garbage_bin, 1=overflow, 2=garbage
                 class_mapping={0: 2, 1: 0, 2: 1},
                 backend=self._select_backend(self.settings.garbage_onnx_model, self.settings.garbage_pt_model),
             ),
@@ -75,11 +76,6 @@ class DetectionService:
                 key="fire",
                 class_mapping={0: 3},
                 backend=self._select_backend(self.settings.fire_onnx_model, self.settings.fire_pt_model),
-            ),
-            DetectorBundle(
-                key="smoke",
-                class_mapping={1: 4},
-                backend=self._select_backend(self.settings.smoke_onnx_model, self.settings.smoke_pt_model),
             ),
         ]
 
@@ -224,18 +220,18 @@ class DetectionService:
     def draw_boxes(self, image: np.ndarray, detections: list[dict]) -> np.ndarray:
         output = image.copy()
         en_label_map = {
-            "垃圾桶": "GarbageBin",
-            "垃圾溢出": "Overflow",
-            "散落垃圾": "Garbage",
-            "火焰": "FIRE",
-            "烟雾": "SMOKE",
-            "未知目标": "Unknown",
+            0: "GarbageBin",
+            1: "Overflow",
+            2: "Garbage",
+            3: "FIRE",
+            4: "SMOKE",
         }
+
 
         for detection in detections:
             x1, y1, x2, y2 = detection["bbox"]
             box_color = detection.get("color", (0, 255, 0))
-            en_name = en_label_map.get(detection["class_name"], detection["class_name"])
+            en_name = en_label_map.get(detection["class_id"], detection["class_name"])
             label = f"{en_name} {detection['confidence']:.0%}"
             line_w = 3 if detection["alert"] else 2
 
@@ -296,3 +292,7 @@ class DetectionService:
             rendered = self.draw_boxes(image, detections)
             result_image = frame_to_base64(rendered)
         return {"scene": scene, "detections": detections, "result_image": result_image}
+
+
+
+

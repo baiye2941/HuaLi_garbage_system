@@ -512,6 +512,9 @@ function applyCompletedResult(result) {
     videoPlayer.src = videoUrl;
     videoPlayer.classList.remove('hidden');
     document.getElementById('video-placeholder').classList.add('hidden');
+    videoPlayer.play().catch(() => {
+      // Ignore autoplay blocks by browser policy.
+    });
   }
 
   addResult({

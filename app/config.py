@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "垃圾分类检测系统"
+    app_name: str = "Garbage Detection System"
     app_version: str = "2.0.0"
     debug: bool = False
     api_prefix: str = "/api"
@@ -53,4 +53,5 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
 

@@ -97,7 +97,8 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
         detection_service: DetectionService = Depends(get_detection_service),
     ) -> dict:
         image = await read_image_file(file)
-        detections = detection_service.apply_cooldown(detection_service.detect(image))
+        # Image upload should alert on every request (no cooldown).
+        detections = detection_service.detect(image)
         rendered = detection_service.draw_boxes(image, detections)
         payload = detection_service.build_response(image, detections, with_image=True)
         record_service.create_alert_record(db, payload["scene"], detections, rendered, source="image")
@@ -114,7 +115,8 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
         except Exception as exc:
             raise HTTPException(status_code=400, detail="图片解析失败") from exc
 
-        detections = detection_service.apply_cooldown(detection_service.detect(image))
+        # Camera/base64 requests follow the same no-cooldown behavior as image upload.
+        detections = detection_service.detect(image)
         rendered = detection_service.draw_boxes(image, detections)
         payload = detection_service.build_response(image, detections, with_image=True)
         record_service.create_alert_record(db, payload["scene"], detections, rendered, source="camera")
