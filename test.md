@@ -39,6 +39,8 @@
 | `tests/test_record_service.py` | 记录持久化服务 | 单元测试 + 数据库 |
 | `tests/test_statistics_service.py` | 统计计算服务 | 单元测试 + 数据库 |
 | `tests/test_concurrency.py` | 并发写入场景 | 并发测试 |
+| `tests/test_detector.py` | 旧 detector 兼容层与无模型安全行为 | 兼容性测试 |
+| `tests/test_legacy_compat.py` | 旧 cooldown / inference 兼容层委托行为 | 兼容性测试 |
 
 ---
 
@@ -134,7 +136,7 @@ fire > smoke > overflow > general_alert > normal
 
 **覆盖内容：**
 
-- 无可用模型时返回空结果（演示模式）
+- 无可用模型时返回空结果（无随机演示检测，避免虚假告警）
 - 单模型推理结果映射正确性
 - 多模型并行推理结果合并逻辑
 - 忽略未加载后端的过滤机制

@@ -25,13 +25,16 @@ print(f"目录存在: {os.path.exists(uploads_dir)}")
 print(f"可写: {os.access(uploads_dir, os.W_OK)}")
 
 print("\n" + "=" * 50)
-print("测试3: 检测模型导入")
+print("测试3: 检测服务导入")
 print("=" * 50)
 try:
-    from detector import MyDetector
-    print("detector.py 导入成功")
+    from app.dependencies import get_detection_service
+
+    detection_service = get_detection_service()
+    print("DetectionService 导入成功")
+    print(f"模型加载状态: {detection_service.models_loaded}")
 except Exception as e:
-    print(f"detector.py 导入失败: {e}")
+    print(f"DetectionService 导入失败: {e}")
 
 print("\n" + "=" * 50)
 print("测试完成!")

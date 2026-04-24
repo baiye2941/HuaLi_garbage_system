@@ -120,7 +120,7 @@ class DummyRecordService:
 
 
 class DummyDB:
-    def commit(self):
+    def rollback(self):
         return None
 
 

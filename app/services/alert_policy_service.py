@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from app.core.constants import ALL_CLASSES
+from app.constants import ALL_CLASSES
 
 
 class AlertPolicyService:

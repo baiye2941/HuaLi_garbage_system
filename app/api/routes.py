@@ -263,7 +263,7 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
         async def event_generator():
             last_state: tuple | None = None
             while True:
-                db.commit()  # end stale read-tx so we see background-thread commits
+                db.rollback()  # end stale read-tx so we see background-thread commits
                 record = record_service.get_video_task(db, task_id)
                 if record is None:
                     yield f"event: error\ndata: {json.dumps({'message': '任务不存在'}, ensure_ascii=False)}\n\n"
@@ -340,7 +340,7 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
 
         async def event_generator():
             while True:
-                db.commit()
+                db.rollback()
                 total, records = record_service.list_alerts(db, page=page, per_page=per_page, status=status)
                 payload = {
                     "total": total,
@@ -375,7 +375,7 @@ def build_api_router(settings: Settings, started_at: str) -> APIRouter:
     async def stream_statistics(db: Session = Depends(get_db)) -> StreamingResponse:
         async def event_generator():
             while True:
-                db.commit()
+                db.rollback()
                 data = record_service.build_statistics(db, started_at=started_at)
                 yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(10)

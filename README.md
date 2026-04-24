@@ -121,7 +121,6 @@ HuaLi_garbage_system/
 │   │   ├── pages.py                # 页面路由
 │   │   └── routes.py               # API 路由（检测、预警、统计、任务、SSE、WebSocket）
 │   ├── core/                       # 应用核心契约层
-│   │   ├── constants.py            # 常量 re-export（兼容导入路径）
 │   │   ├── exceptions.py           # AppError 异常层次结构
 │   │   ├── geometry.py             # 几何计算工具
 │   │   ├── responses.py            # 统一响应 envelope
@@ -227,7 +226,7 @@ HuaLi_garbage_system/
 
 1. 优先加载 ONNX Runtime 运行对应 `.onnx` 模型
 2. ONNX 不可用时回退到 Ultralytics `.pt` 权重
-3. 所有模型均不可用时保留演示模式，前端页面可正常联调
+3. 所有模型均不可用时进入无模型安全模式：检测接口返回空结果，前端页面仍可正常访问与联调
 
 ### 模型文件获取
 
@@ -235,7 +234,7 @@ HuaLi_garbage_system/
 
 1. **自行训练**：使用 Ultralytics YOLOv8 在自定义数据集上训练，导出 `.pt` 和 `.onnx` 格式
 2. **预训练模型**：联系项目维护者获取预训练权重文件
-3. **演示模式**：无模型时系统以演示模式运行，可正常访问前端页面
+3. **无模型安全模式**：无模型时系统不生成随机检测结果，但可正常访问前端页面、接口与任务链路
 
 ---
 
@@ -482,7 +481,7 @@ pytest --cov=app --cov-report=html
 Rust 仅覆盖核心计算热路径（IoU、NMS、批量去重），Python 层保留完整回退逻辑。Rust 不可用时系统仍可正常运行，不强制所有部署都依赖 Rust。
 
 **3. 双推理后端 + 自动回退**
-ONNX Runtime → Ultralytics `.pt` → 演示模式三级降级，对运行环境的要求弹性较好，适合多种部署场景。
+ONNX Runtime → Ultralytics `.pt` → 无模型安全模式三级降级，对运行环境的要求弹性较好，且不会因缺少模型而生成虚假告警。
 
 **4. 统一异常与响应体系**
 `AppError` 层次结构 + `error_response()` envelope 保证 API 错误响应格式一致，前端处理逻辑简单。

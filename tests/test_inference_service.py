@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from app.core.constants import ALL_CLASSES
+from app.constants import ALL_CLASSES
 from app.infrastructure.ml.model_registry import ModelBundle, ModelDescriptor, ModelRegistry
 from app.services.inference_service import InferenceService
 

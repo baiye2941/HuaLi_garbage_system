@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
+import sqlite3
+import time
 
 import cv2
 from sqlalchemy import func
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, selectinload
 
 from app.constants import ALL_CLASSES, BIN_TYPES
@@ -13,9 +17,43 @@ from app.db_models import AlertRecord, DetectionRecord, VideoTaskRecord
 from app.utils import frame_to_base64, relative_to, save_image
 
 
+SQLITE_WRITE_RETRY_ATTEMPTS = 3
+SQLITE_WRITE_RETRY_DELAY_SECONDS = 0.1
+
+logger = logging.getLogger(__name__)
+
+
 class RecordService:
     def __init__(self, uploads_dir: Path):
         self.uploads_dir = uploads_dir
+
+    def _commit_with_retry(self, db: Session) -> None:
+        attempts = SQLITE_WRITE_RETRY_ATTEMPTS
+        for attempt in range(1, attempts + 1):
+            try:
+                db.commit()
+                return
+            except OperationalError as exc:
+                db.rollback()
+                if not self._is_retryable_sqlite_write_error(exc) or attempt >= attempts:
+                    raise
+                delay_seconds = SQLITE_WRITE_RETRY_DELAY_SECONDS * attempt
+                logger.warning(
+                    "sqlite write retry attempt=%d max_attempts=%d delay_seconds=%.2f error=%s",
+                    attempt,
+                    attempts,
+                    delay_seconds,
+                    exc,
+                )
+                time.sleep(delay_seconds)
+
+    @staticmethod
+    def _is_retryable_sqlite_write_error(exc: OperationalError) -> bool:
+        original = getattr(exc, "orig", None)
+        if not isinstance(original, sqlite3.OperationalError):
+            return False
+        message = str(original).lower()
+        return "database is locked" in message or "database table is locked" in message
 
     def create_alert_record(
         self,
@@ -54,7 +92,7 @@ class RecordService:
                 ),
             )
 
-        db.commit()
+        self._commit_with_retry(db)
         db.refresh(record)
         return record
 
@@ -164,7 +202,7 @@ class RecordService:
         else:
             record.status = status
             record.message = message
-        db.commit()
+        self._commit_with_retry(db)
         db.refresh(record)
         return record
 
@@ -174,7 +212,7 @@ class RecordService:
             return None
         for key, value in kwargs.items():
             setattr(record, key, value)
-        db.commit()
+        self._commit_with_retry(db)
         db.refresh(record)
         return record
 

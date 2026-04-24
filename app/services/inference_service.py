@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 
-from app.core.constants import ALL_CLASSES
+from app.constants import ALL_CLASSES
 from app.infrastructure.ml.model_registry import ModelRegistry
 
 

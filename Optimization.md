@@ -233,6 +233,22 @@
 
 ---
 
+## 2026-04-24 变更记录
+
+### 1. 历史兼容层与死代码清理
+- **变更类型**：代码清理、兼容性收敛
+- **变更内容**：
+  - `app/detector.py` 不再保留随机 `_fake_detect()` 演示检测实现；无模型时直接返回空结果，避免生成虚假告警并写入数据库。
+  - `app/alert_cooldown.py`、`app/services/inference.py` 改为兼容包装层，内部委托现行 `AlertPolicyService`、`InferenceService` / `backends.py` 实现。
+  - 删除 `app/core/constants.py` 空壳转发文件，相关引用统一到 `app/constants.py`。
+  - `app/test_video.py` 已移至 `scripts/test_video.py`，避免调试脚本驻留在 `app/` 源码目录。
+  - 删除无引用的 `package.json`、`package-lock.json`。
+- **影响范围**：`app/detector.py`、`app/alert_cooldown.py`、`app/services/inference.py`、`app/constants.py`、`scripts/test_video.py`
+- **风险说明**：对外保留旧导入路径兼容，但会发出 `DeprecationWarning`；核心业务逻辑已统一到当前主链路，减少双重/三重实现带来的漂移风险。
+- **验证结果**：聚焦回归测试通过，包括 `tests/test_detector.py`、`tests/test_legacy_compat.py`、`tests/test_detection_service.py`、`tests/test_inference_service.py`。
+
+---
+
 ## 2026-04-22 第三次变更记录
 
 ### 1. Rust 桥接切换为独立 REST 微服务
