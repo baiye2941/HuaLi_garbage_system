@@ -320,7 +320,21 @@ pip install maturin
 maturin develop --manifest-path rust/Cargo.toml
 ```
 
-> 若 `huali_garbage_core` 未构建成功，应用会自动回退到纯 Python 实现，不会因 PyO3 缺失而不可用。
+### 预编译 wheel 分发
+
+项目提供 GitHub Actions 工作流 [build-rust-wheel.yml](.github/workflows/build-rust-wheel.yml)，可在打 tag 或手动触发时构建 Windows 预编译 wheel。
+
+- `push tag`：自动构建并上传到对应 Release
+- `workflow_dispatch`：可只生成 artifact，或指定已有 tag 并发布到该 Release
+
+> 当前仓库内这套自动分发链路以 Windows 为主；如需 Linux / macOS，可在同一工作流中继续扩展对应平台构建。
+
+构建产物可：
+
+- 上传到 GitHub Releases，供 `start_queue.bat` 自动下载并安装
+- 或直接随发行包放入仓库 `vendor/` 目录，供 `start_queue.bat` 优先本地安装
+
+> 若 `huali_garbage_core` 未安装或构建失败，应用会自动回退到纯 Python 实现，不会因 PyO3 缺失而不可用。
 
 ### 构建 Rust REST 服务（备用）
 
@@ -357,12 +371,22 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. 编译 Rust 扩展（可选但推荐）
+### 4. 安装 Rust 加速层（默认无需本地 Rust）
 
-需要安装 [Rust 工具链](https://rustup.rs/)：
+普通用户**不需要安装 Rust 工具链**。
+
+项目启动脚本会按以下顺序自动处理 Rust 加速：
+
+1. 直接使用已安装的 `huali_garbage_core`
+2. 从仓库 `vendor/` 目录安装预编译 wheel
+3. 从 GitHub Releases 自动下载匹配的 Windows wheel
+4. 如果本机已安装 Rust，再尝试本地构建 PyO3 扩展
+5. 若以上都不可用，则自动回退到纯 Python 实现
+
+如果你是项目维护者，仍可手动构建：
 
 ```bash
-# 构建 PyO3 扩展（推荐）
+# 构建 PyO3 扩展
 pip install maturin
 maturin develop --manifest-path rust/Cargo.toml
 
@@ -400,6 +424,14 @@ MAX_UPLOAD_SIZE_MB=200
 # Rust 服务配置（HTTP 备用路径）
 RUST_SERVICE_URL=http://127.0.0.1:3000
 
+# 启动脚本自动下载 wheel 的配置
+# 默认仓库：Nyzeep/HuaLi_garbage_system
+# 默认 tag：latest（即最新 Release）
+# 默认文件匹配：huali_garbage_core-*-win_amd64.whl
+GITHUB_REPO=Nyzeep/HuaLi_garbage_system
+GITHUB_RELEASE_TAG=latest
+WHEEL_ASSET_GLOB=huali_garbage_core-*-win_amd64.whl
+
 # ONNX / 推理优化
 PREFER_ONNX_GPU=true
 ONNX_GPU_DEVICE_ID=0
@@ -431,23 +463,34 @@ BIN_COLOR_MIN_CONFIDENCE=0.4
 start_queue.bat
 ```
 
-脚本自动完成：检查/创建虚拟环境 → 安装依赖 → 启动 Rust REST 服务 → 启动 Celery Worker → 启动 FastAPI 并打开浏览器。
+脚本自动完成：检查/创建虚拟环境 → 安装依赖 → 优先安装本地或 GitHub Release 的预编译 Rust wheel → 启动 Celery Worker → 启动 FastAPI。
+
+如需指定下载源，可在运行前设置 `GITHUB_REPO`、`GITHUB_RELEASE_TAG`、`WHEEL_ASSET_GLOB`。
 
 ### 方式二：手动启动
 
 ```bash
-# 1. 启动 Rust REST 服务（如使用 HTTP 路径）
-cargo build --release --manifest-path rust/Cargo.toml
-./rust/target/release/huali_garbage_server
+# 1. 安装 Python 依赖
+pip install -r requirements.txt
 
-# 2. 启动 Web 服务（兼容入口）
+# 2. （可选）安装预编译 Rust wheel
+#    文件名会随版本变化，按实际产物替换
+pip install vendor/huali_garbage_core-*.whl
+
+# 2'. 或直接使用 start_queue.bat 自动从 GitHub Release 下载对应 wheel
+
+# 3. 启动 Web 服务（兼容入口）
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
-# 2'. 启动 Web 服务（工厂模式，推荐给 ASGI server / 部署脚本）
+# 3'. 启动 Web 服务（工厂模式，推荐给 ASGI server / 部署脚本）
 uvicorn app.main:create_asgi_app --factory --host 127.0.0.1 --port 8000 --reload
 
-# 3. （可选）启动 Celery Worker
+# 4. （可选）启动 Celery Worker
 python -m celery -A app.celery_app worker --loglevel=info --pool=solo
+
+# 5. （仅维护者）如需本地构建 Rust HTTP 服务
+cargo build --release --manifest-path rust/Cargo.toml
+./rust/target/release/huali_garbage_server
 ```
 
 > 说明：
