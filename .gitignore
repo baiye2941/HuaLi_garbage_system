@@ -9,3 +9,5 @@ __pycache__/
 target/
 app/uploads/
 .trae/
+.env
+Optimization.md
